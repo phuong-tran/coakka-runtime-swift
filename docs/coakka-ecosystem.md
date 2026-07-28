@@ -8,12 +8,12 @@ not the whole product surface.
 
 | Repository | Role |
 | --- | --- |
-| `coakka-samples` | Runnable examples, scenarios, screenshots, videos, and sample commands. Start here when you want to see behavior before choosing a package. |
-| `coakka-publish` | Public artifact mirror, release notes, compatibility matrix, package-manager status, checksums, and tool downloads. |
-| `coakka-runtime-go` | Go module for CoAkka Runtime. |
-| `coakka-logger-go` | Go module for CoAkka Logger. |
-| `coakka-runtime-swift` | SwiftPM package for CoAkka Runtime on macOS ARM64. |
-| `coakka-logger-swift` | SwiftPM package for CoAkka Logger on macOS ARM64. |
+| [`coakka-samples`](https://github.com/phuong-tran/coakka-samples) | Runnable examples, scenarios, screenshots, videos, and sample commands. Start here when you want to see behavior before choosing a package. |
+| [`coakka-publish`](https://github.com/phuong-tran/coakka-publish) | Public artifact mirror, release notes, compatibility matrix, package-manager status, checksums, and tool downloads. |
+| [`coakka-runtime-go`](https://github.com/phuong-tran/coakka-runtime-go) | Go module for CoAkka Runtime. |
+| [`coakka-logger-go`](https://github.com/phuong-tran/coakka-logger-go) | Go module for CoAkka Logger. |
+| [`coakka-runtime-swift`](https://github.com/phuong-tran/coakka-runtime-swift) | SwiftPM package for CoAkka Runtime on macOS ARM64. |
+| [`coakka-logger-swift`](https://github.com/phuong-tran/coakka-logger-swift) | SwiftPM package for CoAkka Logger on macOS ARM64. |
 
 ## Package-Manager Surfaces
 
@@ -50,15 +50,17 @@ emitted and what happened under pressure.
 
 ## How To Navigate
 
-Use `coakka-samples` when you want runnable proof. Use `coakka-publish` when
-you need exact versions, checksums, compatibility, release history, or tool
+Use [`coakka-samples`](https://github.com/phuong-tran/coakka-samples) when
+you want runnable proof. Use
+[`coakka-publish`](https://github.com/phuong-tran/coakka-publish) when you
+need exact versions, checksums, compatibility, release history, or tool
 downloads. Use a language package repo when you already know the host language
 you want to embed.
 
 Important docs:
 
-- `https://github.com/phuong-tran/coakka-samples/blob/main/docs/new-to-coakka.md`
-- `https://github.com/phuong-tran/coakka-samples/blob/main/docs/how-it-works.md`
-- `https://github.com/phuong-tran/coakka-samples/blob/main/docs/incremental-adoption.md`
-- `https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md`
-- `https://github.com/phuong-tran/coakka-publish/blob/main/docs/package-manager-roadmap.md`
+- [New To CoAkka](https://github.com/phuong-tran/coakka-samples/blob/main/docs/new-to-coakka.md)
+- [How It Works](https://github.com/phuong-tran/coakka-samples/blob/main/docs/how-it-works.md)
+- [Incremental Adoption](https://github.com/phuong-tran/coakka-samples/blob/main/docs/incremental-adoption.md)
+- [Compatibility Matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md)
+- [Package Manager Roadmap](https://github.com/phuong-tran/coakka-publish/blob/main/docs/package-manager-roadmap.md)

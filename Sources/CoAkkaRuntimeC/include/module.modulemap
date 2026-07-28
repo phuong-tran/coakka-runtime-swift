@@ -1,0 +1,4 @@
+module CoAkkaRuntimeC {
+  header "coakka_runtime_bridge.h"
+  export *
+}

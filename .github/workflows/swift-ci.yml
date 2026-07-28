@@ -1,0 +1,20 @@
+name: Swift CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Verify native payload
+        run: bash scripts/verify-native-payload.sh
+      - name: Test package
+        run: swift test
+      - name: Run smoke
+        run: swift run CoAkkaRuntimeSmoke

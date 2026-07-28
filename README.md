@@ -10,6 +10,22 @@ SwiftPM connector package for the CoAkka runtime v2.
 The current Swift runtime lane targets macOS ARM64. Mobile platforms are not
 part of this release plan.
 
+SwiftPM package URL:
+
+```text
+https://github.com/phuong-tran/coakka-runtime-swift.git
+```
+
+Use the exact version `1.3.2`.
+
+Public package links:
+
+| Link | Purpose |
+| --- | --- |
+| [GitHub Release v1.3.2](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.3.2) | SwiftPM package release with the macOS ARM64 native runtime. |
+| [Runtime sample](https://github.com/phuong-tran/coakka-samples/tree/main/runtime/swift/basic) | Runnable request/reply sample. |
+| [Compatibility matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md) | Current native generation and package-manager status. |
+
 ## New To CoAkka
 
 CoAkka is a native-backed runtime and logger toolkit for application-owned

@@ -1,7 +1,7 @@
 # CoAkka Runtime Swift Connector
 
 [![CI](https://github.com/phuong-tran/coakka-runtime-swift/actions/workflows/swift-ci.yml/badge.svg)](https://github.com/phuong-tran/coakka-runtime-swift/actions/workflows/swift-ci.yml)
-[![Version](https://img.shields.io/badge/version-v1.3.3-blue)](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.3.3)
+[![Version](https://img.shields.io/badge/version-v1.3.4-blue)](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.3.4)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Funding](https://img.shields.io/badge/funding-Ko--fi-ff5f5f)](https://ko-fi.com/phuongnamtran)
 
@@ -16,13 +16,13 @@ SwiftPM package URL:
 https://github.com/phuong-tran/coakka-runtime-swift.git
 ```
 
-Use the exact version `1.3.3`.
+Use the exact version `1.3.4`.
 
 Public package links:
 
 | Link | Purpose |
 | --- | --- |
-| [GitHub Release v1.3.3](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.3.3) | SwiftPM package release with the macOS ARM64 native runtime. |
+| [GitHub Release v1.3.4](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.3.4) | SwiftPM package release with the macOS ARM64 native runtime. |
 | [Runtime sample](https://github.com/phuong-tran/coakka-samples/tree/main/runtime/swift/basic) | Runnable request/reply sample. |
 | [Compatibility matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md) | Current native generation and package-manager status. |
 
@@ -120,7 +120,7 @@ The package wraps the public runtime C ABI and bundles one macOS ARM64 native
 runtime library staged from:
 
 ```text
-coakka-runtime-native-v2 1.3.3+282f3ad
+coakka-runtime-native-v2 1.3.4+dc6ec284
 ```
 
 The bundled resource is:

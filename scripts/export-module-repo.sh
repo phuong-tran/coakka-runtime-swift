@@ -40,4 +40,4 @@ tar \
 
 echo "[swift-export-runtime-module] module=${dest_dir}"
 echo "[swift-export-runtime-module] path=github.com/phuong-tran/coakka-runtime-swift"
-echo "[swift-export-runtime-module] native=1.3.3+282f3ad"
+echo "[swift-export-runtime-module] native=1.3.4+dc6ec284"

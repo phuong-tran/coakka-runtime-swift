@@ -19,7 +19,7 @@ not the whole product surface.
 
 | Channel | Runtime entrypoint | Logger entrypoint |
 | --- | --- | --- |
-| NuGet | [`CoAkka.Runtime` 1.3.3](https://www.nuget.org/packages/CoAkka.Runtime/1.3.3) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
+| NuGet | [`CoAkka.Runtime` 1.3.5](https://www.nuget.org/packages/CoAkka.Runtime/1.3.5) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
 | npm | [`coakka-v2-connector-node` 1.3.11](https://www.npmjs.com/package/coakka-v2-connector-node/v/1.3.11) | [`coakka-logger-node` 1.2.6](https://www.npmjs.com/package/coakka-logger-node/v/1.2.6) |
 | PyPI | [`coakka-v2-connector` 1.3.6](https://pypi.org/project/coakka-v2-connector/1.3.6/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
 | Go modules | [`coakka-runtime-go` v1.3.12](https://pkg.go.dev/github.com/phuong-tran/coakka-runtime-go@v1.3.12) | [`coakka-logger-go` v1.2.5](https://pkg.go.dev/github.com/phuong-tran/coakka-logger-go@v1.2.5) |

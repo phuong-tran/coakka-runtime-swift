@@ -13,7 +13,7 @@ if [[ -z "${core_root}" && -d "${repo_root}/../coakkaCoreNativeDev" ]]; then
 fi
 
 if [[ -n "${core_root}" ]]; then
-  native_source="${core_root}/build/v2/release-public-native/1.3.2+caff6d6d/package/coakka-runtime-native-v2-1.3.2/native/macos-aarch64/libcoakka_runtime_v2.dylib"
+  native_source="${core_root}/build/v2/release-public-native/1.3.3+282f3ad/package/coakka-runtime-native-v2-1.3.3/native/macos-aarch64/libcoakka_runtime_v2.dylib"
   if [[ -f "${native_source}" ]]; then
     mkdir -p "${resource_root}"
     cp "${native_source}" "${native_dest}"

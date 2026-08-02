@@ -34,12 +34,18 @@ EOF
 cat >"${work_root}/Sources/ConsumerSmoke/main.swift" <<'EOF'
 import CoAkkaRuntime
 
+let capabilities = try RuntimeHost.readRuntimeCapabilities()
+let mode: TcpConnectionMode = capabilities.supports(.tcpBoundedPool)
+    ? .boundedPool
+    : .perExchange
 let runtime = try RuntimeHost.start(
     ConnectorStartSpec(
         systemName: "swift-consumer-smoke",
         nodeID: "swift-consumer-smoke-node",
         queueCapacity: 64,
-        routes: [.local("svc.echo", port: 19193)]
+        routes: [.local("svc.echo", port: 19193)],
+        connectionStrategy: TcpConnectionStrategySpec(mode: mode),
+        security: TcpSecuritySpec()
     )
 )
 defer {
@@ -58,7 +64,13 @@ let response = try runtime.askText(
     deliveryHint: .requireLocal
 )
 
-print("consumer_response=\(response) delivered=\(runtime.clientStats().deliveredRequests)")
+guard runtime.startupTcpConnectionResult()?.applied == true,
+      runtime.startupTcpSecurityResult()?.applied == true,
+      try runtime.tcpConnectionConfig().mode == mode else {
+    fatalError("explicit startup transport policy was not preserved")
+}
+
+print("consumer_response=\(response) delivered=\(runtime.clientStats().deliveredRequests) capabilities=\(capabilities.effectiveCapabilities.rawValue)")
 EOF
 
 (

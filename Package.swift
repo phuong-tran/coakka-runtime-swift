@@ -26,6 +26,10 @@ let package = Package(
             name: "CoAkkaRuntimeSmoke",
             dependencies: ["CoAkkaRuntime"]
         ),
+        .executableTarget(
+            name: "CoAkkaRuntimeTransportSmoke",
+            dependencies: ["CoAkkaRuntime"]
+        ),
         .testTarget(
             name: "CoAkkaRuntimeTests",
             dependencies: ["CoAkkaRuntime"]

@@ -1,9 +1,19 @@
 #include "coakka_runtime_bridge.h"
 
-#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX 1
+#endif
+#include <io.h>
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#include <unistd.h>
+#endif
 
 typedef struct native_runtime_t native_runtime_t;
 typedef struct native_ask_client_t native_ask_client_t;
@@ -88,6 +98,20 @@ typedef int32_t (*submit_envelope_fn)(native_runtime_t *, const uint8_t *, size_
 typedef int32_t (*get_config_fn)(native_runtime_t *, native_runtime_config_view_t *);
 typedef int32_t (*get_health_fn)(native_runtime_t *, coakka_swift_runtime_health_t *);
 typedef int32_t (*get_stats_fn)(native_runtime_t *, coakka_swift_runtime_stats_t *);
+typedef int32_t (*get_capabilities_fn)(coakka_swift_runtime_capabilities_t *);
+typedef int32_t (*apply_tcp_connection_options_fn)(
+    native_runtime_t *,
+    const coakka_swift_tcp_connection_options_t *,
+    coakka_swift_tcp_connection_apply_result_t *);
+typedef int32_t (*get_tcp_connection_config_fn)(native_runtime_t *,
+                                                coakka_swift_tcp_connection_config_t *);
+typedef int32_t (*apply_tcp_security_options_fn)(
+    native_runtime_t *,
+    const coakka_swift_tcp_security_options_t *,
+    coakka_swift_tcp_security_apply_result_t *);
+typedef int32_t (*get_tcp_security_info_fn)(native_runtime_t *,
+                                            coakka_swift_tcp_security_info_t *);
+typedef const char *(*transport_apply_reason_name_fn)(uint32_t);
 typedef native_ask_client_t *(*ask_client_create_fn)(native_runtime_t *, const coakka_swift_host_handles_t *);
 typedef void (*ask_client_destroy_fn)(native_ask_client_t *);
 typedef int32_t (*ask_client_begin_fn)(native_ask_client_t *, const uint8_t *, size_t, native_ask_ticket_t **);
@@ -116,6 +140,12 @@ typedef struct runtime_library_t {
     get_config_fn get_config;
     get_health_fn get_health;
     get_stats_fn get_stats;
+    get_capabilities_fn get_capabilities;
+    apply_tcp_connection_options_fn apply_tcp_connection_options;
+    get_tcp_connection_config_fn get_tcp_connection_config;
+    apply_tcp_security_options_fn apply_tcp_security_options;
+    get_tcp_security_info_fn get_tcp_security_info;
+    transport_apply_reason_name_fn transport_apply_reason_name;
     ask_client_create_fn ask_client_create;
     ask_client_destroy_fn ask_client_destroy;
     ask_client_begin_fn ask_client_begin;
@@ -135,6 +165,62 @@ static runtime_library_t *as_library(coakka_swift_runtime_library_t *library) {
     return (runtime_library_t *)library;
 }
 
+static void *platform_library_open(const char *path) {
+#if defined(_WIN32)
+    int wide_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
+    if (wide_len <= 0) {
+        return NULL;
+    }
+    wchar_t *wide_path = (wchar_t *)calloc((size_t)wide_len, sizeof(wchar_t));
+    if (wide_path == NULL) {
+        return NULL;
+    }
+    if (MultiByteToWideChar(CP_UTF8,
+                            MB_ERR_INVALID_CHARS,
+                            path,
+                            -1,
+                            wide_path,
+                            wide_len) <= 0) {
+        free(wide_path);
+        return NULL;
+    }
+    HMODULE handle = LoadLibraryW(wide_path);
+    free(wide_path);
+    return (void *)handle;
+#else
+    return dlopen(path, RTLD_NOW | RTLD_LOCAL);
+#endif
+}
+
+static void platform_library_close(void *handle) {
+    if (handle == NULL) {
+        return;
+    }
+#if defined(_WIN32)
+    FreeLibrary((HMODULE)handle);
+#else
+    dlclose(handle);
+#endif
+}
+
+static void *platform_library_symbol(void *handle, const char *name) {
+#if defined(_WIN32)
+    return (void *)GetProcAddress((HMODULE)handle, name);
+#else
+    dlerror();
+    return dlsym(handle, name);
+#endif
+}
+
+static const char *platform_library_error(void) {
+#if defined(_WIN32)
+    return "Windows loader rejected the runtime library or symbol";
+#else
+    const char *error = dlerror();
+    return error == NULL ? "unknown loader error" : error;
+#endif
+}
+
 static void set_error(char *buf, size_t len, const char *prefix, const char *value) {
     if (buf == NULL || len == 0) {
         return;
@@ -143,10 +229,8 @@ static void set_error(char *buf, size_t len, const char *prefix, const char *val
 }
 
 static int32_t load_symbol(runtime_library_t *library, void **out_symbol, const char *name, char *error_buf, size_t error_buf_len) {
-    dlerror();
-    void *symbol = dlsym(library->handle, name);
-    const char *error = dlerror();
-    if (error != NULL || symbol == NULL) {
+    void *symbol = platform_library_symbol(library->handle, name);
+    if (symbol == NULL) {
         set_error(error_buf, error_buf_len, "missing symbol: ", name);
         return COAKKA_SWIFT_ERR_SYMBOL;
     }
@@ -159,7 +243,7 @@ static int32_t load_symbol(runtime_library_t *library, void **out_symbol, const 
         void *symbol = NULL; \
         int32_t status = load_symbol(library, &symbol, name, error_buf, error_buf_len); \
         if (status != COAKKA_SWIFT_OK) { \
-            dlclose(library->handle); \
+            platform_library_close(library->handle); \
             free(library); \
             return status; \
         } \
@@ -180,9 +264,9 @@ int32_t coakka_swift_runtime_library_open(const char *path,
         set_error(error_buf, error_buf_len, "out of memory", "");
         return COAKKA_SWIFT_STATUS_NOMEM;
     }
-    library->handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    library->handle = platform_library_open(path);
     if (library->handle == NULL) {
-        set_error(error_buf, error_buf_len, "failed to open runtime library: ", dlerror());
+        set_error(error_buf, error_buf_len, "failed to open runtime library: ", platform_library_error());
         free(library);
         return COAKKA_SWIFT_ERR_LOAD;
     }
@@ -199,6 +283,22 @@ int32_t coakka_swift_runtime_library_open(const char *path,
     LOAD_SYMBOL(get_config, get_config_fn, "coakka_v2_runtime_get_config");
     LOAD_SYMBOL(get_health, get_health_fn, "coakka_v2_runtime_get_health");
     LOAD_SYMBOL(get_stats, get_stats_fn, "coakka_v2_runtime_get_stats");
+    LOAD_SYMBOL(get_capabilities, get_capabilities_fn, "coakka_v2_runtime_get_capabilities");
+    LOAD_SYMBOL(apply_tcp_connection_options,
+                apply_tcp_connection_options_fn,
+                "coakka_v2_runtime_apply_tcp_connection_options_ex");
+    LOAD_SYMBOL(get_tcp_connection_config,
+                get_tcp_connection_config_fn,
+                "coakka_v2_runtime_get_tcp_connection_config");
+    LOAD_SYMBOL(apply_tcp_security_options,
+                apply_tcp_security_options_fn,
+                "coakka_v2_runtime_apply_tcp_security_options_ex");
+    LOAD_SYMBOL(get_tcp_security_info,
+                get_tcp_security_info_fn,
+                "coakka_v2_runtime_get_tcp_security_info");
+    LOAD_SYMBOL(transport_apply_reason_name,
+                transport_apply_reason_name_fn,
+                "coakka_v2_transport_apply_reason_name");
     LOAD_SYMBOL(ask_client_create, ask_client_create_fn, "coakka_v2_ask_client_create");
     LOAD_SYMBOL(ask_client_destroy, ask_client_destroy_fn, "coakka_v2_ask_client_destroy");
     LOAD_SYMBOL(ask_client_begin, ask_client_begin_fn, "coakka_v2_ask_client_begin");
@@ -223,7 +323,7 @@ void coakka_swift_runtime_library_close(coakka_swift_runtime_library_t *library)
         return;
     }
     if (lib->handle != NULL) {
-        dlclose(lib->handle);
+        platform_library_close(lib->handle);
     }
     free(lib);
 }
@@ -300,6 +400,45 @@ int32_t coakka_swift_runtime_get_host_handles(coakka_swift_runtime_library_t *li
     out_handles->monitor_read_fd = -1;
     out_handles->delivered_request_read_fd = -1;
     return lib->get_host_handles((native_runtime_t *)runtime, out_handles);
+}
+
+void coakka_swift_host_handles_close(coakka_swift_host_handles_t *handles) {
+    if (handles == NULL) {
+        return;
+    }
+    int fds[] = {
+        handles->request_write_fd,
+        handles->response_read_fd,
+        handles->deadletter_read_fd,
+        handles->control_write_fd,
+        handles->monitor_read_fd,
+        handles->delivered_request_read_fd,
+    };
+    for (size_t i = 0; i < sizeof(fds) / sizeof(fds[0]); ++i) {
+        if (fds[i] < 0) {
+            continue;
+        }
+        int duplicate = 0;
+        for (size_t j = 0; j < i; ++j) {
+            if (fds[j] == fds[i]) {
+                duplicate = 1;
+                break;
+            }
+        }
+        if (!duplicate) {
+#if defined(_WIN32)
+            _close(fds[i]);
+#else
+            close(fds[i]);
+#endif
+        }
+    }
+    handles->request_write_fd = -1;
+    handles->response_read_fd = -1;
+    handles->deadletter_read_fd = -1;
+    handles->control_write_fd = -1;
+    handles->monitor_read_fd = -1;
+    handles->delivered_request_read_fd = -1;
 }
 
 int32_t coakka_swift_runtime_start(coakka_swift_runtime_library_t *library,
@@ -441,6 +580,76 @@ int32_t coakka_swift_runtime_get_stats(coakka_swift_runtime_library_t *library,
     memset(out_stats, 0, sizeof(*out_stats));
     out_stats->struct_size = sizeof(*out_stats);
     return lib->get_stats((native_runtime_t *)runtime, out_stats);
+}
+
+int32_t coakka_swift_runtime_get_capabilities(coakka_swift_runtime_library_t *library,
+                                              coakka_swift_runtime_capabilities_t *out_capabilities) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || out_capabilities == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    memset(out_capabilities, 0, sizeof(*out_capabilities));
+    out_capabilities->struct_size = sizeof(*out_capabilities);
+    return lib->get_capabilities(out_capabilities);
+}
+
+int32_t coakka_swift_runtime_apply_tcp_connection_options(
+    coakka_swift_runtime_library_t *library,
+    coakka_swift_runtime_t *runtime,
+    const coakka_swift_tcp_connection_options_t *options,
+    coakka_swift_tcp_connection_apply_result_t *out_result) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || runtime == NULL || options == NULL || out_result == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    return lib->apply_tcp_connection_options((native_runtime_t *)runtime, options, out_result);
+}
+
+int32_t coakka_swift_runtime_get_tcp_connection_config(
+    coakka_swift_runtime_library_t *library,
+    coakka_swift_runtime_t *runtime,
+    coakka_swift_tcp_connection_config_t *out_config) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || runtime == NULL || out_config == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    memset(out_config, 0, sizeof(*out_config));
+    out_config->struct_size = sizeof(*out_config);
+    return lib->get_tcp_connection_config((native_runtime_t *)runtime, out_config);
+}
+
+int32_t coakka_swift_runtime_apply_tcp_security_options(
+    coakka_swift_runtime_library_t *library,
+    coakka_swift_runtime_t *runtime,
+    const coakka_swift_tcp_security_options_t *options,
+    coakka_swift_tcp_security_apply_result_t *out_result) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || runtime == NULL || options == NULL || out_result == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    return lib->apply_tcp_security_options((native_runtime_t *)runtime, options, out_result);
+}
+
+int32_t coakka_swift_runtime_get_tcp_security_info(
+    coakka_swift_runtime_library_t *library,
+    coakka_swift_runtime_t *runtime,
+    coakka_swift_tcp_security_info_t *out_info) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || runtime == NULL || out_info == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    memset(out_info, 0, sizeof(*out_info));
+    out_info->struct_size = sizeof(*out_info);
+    return lib->get_tcp_security_info((native_runtime_t *)runtime, out_info);
+}
+
+const char *coakka_swift_transport_apply_reason_name(coakka_swift_runtime_library_t *library,
+                                                     uint32_t reason) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL) {
+        return "UNKNOWN";
+    }
+    return lib->transport_apply_reason_name(reason);
 }
 
 coakka_swift_ask_client_t *coakka_swift_ask_client_create(coakka_swift_runtime_library_t *library,

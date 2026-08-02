@@ -12,7 +12,9 @@ let runtime = try RuntimeHost.start(
         systemName: "swift-smoke",
         nodeID: "swift-smoke-node",
         queueCapacity: 64,
-        routes: [.local("svc.echo", port: 19191)]
+        routes: [.local("svc.echo", port: 19191)],
+        connectionStrategy: TcpConnectionStrategySpec(),
+        security: TcpSecuritySpec()
     )
 )
 defer {

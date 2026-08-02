@@ -63,7 +63,7 @@ final class RuntimeFrameReader: @unchecked Sendable {
             } catch {
                 onError(error)
             }
-            usleep(5_000)
+            Thread.sleep(forTimeInterval: 0.005)
         }
     }
 

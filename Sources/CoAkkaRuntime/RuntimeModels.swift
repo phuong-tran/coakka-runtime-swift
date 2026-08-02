@@ -36,6 +36,8 @@ public struct ConnectorStartSpec: Sendable {
     public var generation: UInt64
     public var routes: [RuntimeRouteSpec]
     public var separateDeliveredRequestLane: Bool
+    public var connectionStrategy: TcpConnectionStrategySpec?
+    public var security: TcpSecuritySpec?
 
     public init(
         systemName: String,
@@ -44,7 +46,9 @@ public struct ConnectorStartSpec: Sendable {
         queueCapacity: Int32 = 128,
         generation: UInt64 = 1,
         routes: [RuntimeRouteSpec],
-        separateDeliveredRequestLane: Bool = true
+        separateDeliveredRequestLane: Bool = true,
+        connectionStrategy: TcpConnectionStrategySpec? = nil,
+        security: TcpSecuritySpec? = nil
     ) {
         self.systemName = systemName
         self.nodeID = nodeID
@@ -53,28 +57,28 @@ public struct ConnectorStartSpec: Sendable {
         self.generation = generation
         self.routes = routes
         self.separateDeliveredRequestLane = separateDeliveredRequestLane
-    }
-
-    func normalized() -> ConnectorStartSpec {
-        var copy = self
-        if copy.nodeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            copy.nodeID = "\(copy.systemName)-swift"
-        }
-        if copy.queueCapacity <= 0 {
-            copy.queueCapacity = 128
-        }
-        if copy.generation == 0 {
-            copy.generation = 1
-        }
-        return copy
+        self.connectionStrategy = connectionStrategy
+        self.security = security
     }
 
     func validate() throws {
         guard !systemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw RuntimeError.invalidArgument("systemName must not be blank")
         }
+        guard !systemName.utf8.contains(0) else {
+            throw RuntimeError.invalidArgument("systemName must not contain NUL")
+        }
         guard !nodeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw RuntimeError.invalidArgument("nodeID must not be blank")
+        }
+        guard !nodeID.utf8.contains(0) else {
+            throw RuntimeError.invalidArgument("nodeID must not contain NUL")
+        }
+        guard queueCapacity > 0 else {
+            throw RuntimeError.invalidArgument("queueCapacity must be greater than zero")
+        }
+        guard generation > 0 else {
+            throw RuntimeError.invalidArgument("generation must be greater than zero")
         }
         guard !routes.isEmpty else {
             throw RuntimeError.invalidArgument("at least one local route is required")
@@ -83,8 +87,14 @@ public struct ConnectorStartSpec: Sendable {
             guard !route.target.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw RuntimeError.invalidArgument("route target must not be blank")
             }
+            guard !route.target.utf8.contains(0) else {
+                throw RuntimeError.invalidArgument("route target must not contain NUL")
+            }
             guard !route.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw RuntimeError.invalidArgument("route host must not be blank")
+            }
+            guard !route.host.utf8.contains(0) else {
+                throw RuntimeError.invalidArgument("route host must not contain NUL")
             }
             guard route.port > 0 else {
                 throw RuntimeError.invalidArgument("route port must be non-zero")
@@ -178,6 +188,8 @@ public enum RuntimeError: Error, CustomStringConvertible, Sendable {
     case closed
     case timeout(String)
     case deadletter(RuntimeDeadletter)
+    case tcpConnectionApply(TcpConnectionApplyResult)
+    case tcpSecurityApply(TcpSecurityApplyResult)
 
     public var description: String {
         switch self {
@@ -197,6 +209,10 @@ public enum RuntimeError: Error, CustomStringConvertible, Sendable {
             return "Timed out waiting for response to \(messageID)"
         case .deadletter(let deadletter):
             return "Runtime deadletter \(deadletter.reason) for target \(deadletter.originalTarget)"
+        case .tcpConnectionApply(let result):
+            return "TCP connection apply failed with status \(result.status.rawValue) (\(result.reasonName))"
+        case .tcpSecurityApply(let result):
+            return "TCP security apply failed with status \(result.status.rawValue) (\(result.reasonName))"
         }
     }
 }

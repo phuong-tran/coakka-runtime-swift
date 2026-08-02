@@ -2,30 +2,44 @@ import CoAkkaRuntimeC
 import Foundation
 
 public final class RuntimeHost: @unchecked Sendable {
-    private static let expectedABI: UInt32 = 1
+    static let expectedABI: UInt32 = 1
     private static let activeLock = NSLock()
     nonisolated(unsafe) private static var active = false
 
-    private let library: NativeRuntimeLibrary
-    private var runtime: OpaquePointer?
+    let library: NativeRuntimeLibrary
+    var runtime: OpaquePointer?
     private var askClient: OpaquePointer?
+    private var hostHandles: coakka_swift_host_handles_t?
     private var requestReader: RuntimeFrameReader?
     private let clientLock = NSLock()
+    let transportLock = NSLock()
     private var handlers: [String: @Sendable (RuntimeRequest) throws -> Data] = [:]
     private var nextID: UInt64 = 0
     private var deliveredRequests: UInt64 = 0
     private var matchedResponses: UInt64 = 0
     private var matchedDeadletters: UInt64 = 0
     private var closed = false
+    let startupConnectionResult: TcpConnectionApplyResult?
+    let startupSecurityResult: TcpSecurityApplyResult?
 
     public let runtimeLibPath: String
     public let startSpec: ConnectorStartSpec
 
-    private init(library: NativeRuntimeLibrary, runtime: OpaquePointer, startSpec: ConnectorStartSpec) {
+    private init(
+        library: NativeRuntimeLibrary,
+        runtime: OpaquePointer,
+        hostHandles: coakka_swift_host_handles_t,
+        startSpec: ConnectorStartSpec,
+        startupConnectionResult: TcpConnectionApplyResult?,
+        startupSecurityResult: TcpSecurityApplyResult?
+    ) {
         self.library = library
         self.runtime = runtime
+        self.hostHandles = hostHandles
         self.runtimeLibPath = library.path
         self.startSpec = startSpec
+        self.startupConnectionResult = startupConnectionResult
+        self.startupSecurityResult = startupSecurityResult
     }
 
     deinit {
@@ -33,61 +47,123 @@ public final class RuntimeHost: @unchecked Sendable {
     }
 
     public static func start(_ startSpec: ConnectorStartSpec, runtimeLibPath: String? = nil) throws -> RuntimeHost {
-        let normalized = startSpec.normalized()
+        let normalized = startSpec
         try normalized.validate()
 
         activeLock.lock()
-        defer {
-            activeLock.unlock()
-        }
         guard !active else {
+            activeLock.unlock()
             throw RuntimeError.alreadyStarted
         }
-
-        let path = try runtimeNativePath(explicitPath: runtimeLibPath)
-        let library = try NativeRuntimeLibrary(path: path)
-        let handle = try library.requireHandle()
-        let abi = coakka_swift_runtime_get_abi_version(handle)
-        guard abi == expectedABI else {
-            throw RuntimeError.unsupportedABI(abi)
-        }
-
-        let runtime = try normalized.systemName.withCString { systemName in
-            try normalized.nodeID.withCString { nodeID in
-                guard let runtime = coakka_swift_runtime_create(
-                    handle,
-                    systemName,
-                    nodeID,
-                    normalized.strictNoDrop ? 1 : 0,
-                    normalized.queueCapacity
-                ) else {
-                    throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create runtime")
-                }
-                return runtime
-            }
-        }
+        active = true
+        activeLock.unlock()
 
         do {
-            var handles = coakka_swift_host_handles_t()
-            let flags = normalized.separateDeliveredRequestLane ? UInt32(COAKKA_SWIFT_HOST_SEPARATE_DELIVERED_REQUEST_LANE) : 0
-            try throwIfNativeError(
-                coakka_swift_runtime_get_host_handles(handle, runtime, flags, &handles),
-                operation: "get runtime host handles"
-            )
-            try applyRoutes(library: library, runtime: runtime, generation: normalized.generation, routes: normalized.routes)
-            try throwIfNativeError(coakka_swift_runtime_start(handle, runtime), operation: "start runtime")
-            guard let askClient = coakka_swift_ask_client_create(handle, runtime, &handles) else {
-                throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create ask client")
+            let path = try runtimeNativePath(explicitPath: runtimeLibPath)
+            let library = try NativeRuntimeLibrary(path: path)
+            let handle = try library.requireHandle()
+            let abi = coakka_swift_runtime_get_abi_version(handle)
+            guard abi == expectedABI else {
+                throw RuntimeError.unsupportedABI(abi)
             }
 
-            let host = RuntimeHost(library: library, runtime: runtime, startSpec: normalized)
-            host.askClient = askClient
-            try host.startReaders(handles: handles)
-            active = true
-            return host
+            let runtime = try normalized.systemName.withCString { systemName in
+                try normalized.nodeID.withCString { nodeID in
+                    guard let runtime = coakka_swift_runtime_create(
+                        handle,
+                        systemName,
+                        nodeID,
+                        normalized.strictNoDrop ? 1 : 0,
+                        normalized.queueCapacity
+                    ) else {
+                        throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create runtime")
+                    }
+                    return runtime
+                }
+            }
+
+            var handles = emptyHostHandles()
+            var handlesOwned = false
+            var runtimeStartAttempted = false
+            var nativeAskClient: OpaquePointer?
+            var startupConnectionResult: TcpConnectionApplyResult?
+            var startupSecurityResult: TcpSecurityApplyResult?
+
+            do {
+                if let connectionStrategy = normalized.connectionStrategy {
+                    let result = try applyConnection(
+                        library: library,
+                        runtime: runtime,
+                        spec: connectionStrategy
+                    )
+                    startupConnectionResult = result
+                    guard result.applied else {
+                        throw RuntimeError.tcpConnectionApply(result)
+                    }
+                }
+                if let security = normalized.security {
+                    let result = try applySecurity(library: library, runtime: runtime, spec: security)
+                    startupSecurityResult = result
+                    guard result.applied else {
+                        throw RuntimeError.tcpSecurityApply(result)
+                    }
+                }
+
+                try applyRoutes(
+                    library: library,
+                    runtime: runtime,
+                    generation: normalized.generation,
+                    routes: normalized.routes
+                )
+                let flags = normalized.separateDeliveredRequestLane
+                    ? UInt32(COAKKA_SWIFT_HOST_SEPARATE_DELIVERED_REQUEST_LANE)
+                    : 0
+                try throwIfNativeError(
+                    coakka_swift_runtime_get_host_handles(handle, runtime, flags, &handles),
+                    operation: "get runtime host handles"
+                )
+                handlesOwned = true
+                runtimeStartAttempted = true
+                try throwIfNativeError(coakka_swift_runtime_start(handle, runtime), operation: "start runtime")
+                guard let askClient = coakka_swift_ask_client_create(handle, runtime, &handles) else {
+                    throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create ask client")
+                }
+                nativeAskClient = askClient
+            } catch {
+                if let nativeAskClient {
+                    coakka_swift_ask_client_destroy(handle, nativeAskClient)
+                }
+                if runtimeStartAttempted {
+                    _ = coakka_swift_runtime_stop(handle, runtime)
+                }
+                if handlesOwned {
+                    coakka_swift_host_handles_close(&handles)
+                }
+                coakka_swift_runtime_destroy(handle, runtime)
+                library.close()
+                throw error
+            }
+
+            let host = RuntimeHost(
+                library: library,
+                runtime: runtime,
+                hostHandles: handles,
+                startSpec: normalized,
+                startupConnectionResult: startupConnectionResult,
+                startupSecurityResult: startupSecurityResult
+            )
+            host.askClient = nativeAskClient
+            do {
+                try host.startReaders(handles: handles)
+                return host
+            } catch {
+                host.close()
+                throw error
+            }
         } catch {
-            coakka_swift_runtime_destroy(handle, runtime)
-            library.close()
+            activeLock.lock()
+            active = false
+            activeLock.unlock()
             throw error
         }
     }
@@ -304,6 +380,9 @@ public final class RuntimeHost: @unchecked Sendable {
     }
 
     public func close() {
+        transportLock.lock()
+        defer { transportLock.unlock() }
+
         clientLock.lock()
         if closed {
             clientLock.unlock()
@@ -322,6 +401,10 @@ public final class RuntimeHost: @unchecked Sendable {
             }
             if let runtime {
                 _ = coakka_swift_runtime_stop(handle, runtime)
+                if var handles = hostHandles {
+                    coakka_swift_host_handles_close(&handles)
+                    hostHandles = nil
+                }
                 coakka_swift_runtime_destroy(handle, runtime)
                 self.runtime = nil
             }
@@ -481,7 +564,7 @@ public final class RuntimeHost: @unchecked Sendable {
         clientLock.unlock()
     }
 
-    private func throwIfClosed() throws {
+    func throwIfClosed() throws {
         clientLock.lock()
         let isClosed = closed
         clientLock.unlock()
@@ -507,14 +590,14 @@ private func applyRoutes(
             endpoint.deallocate()
         }
         for string in allocatedStrings {
-            free(string)
+            string.deallocate()
         }
     }
 
     for route in routes {
-        guard let target = strdup(route.target), let host = strdup(route.host), let hint = strdup("") else {
-            throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_NOMEM), "prepare routes")
-        }
+        let target = duplicateCString(route.target)
+        let host = duplicateCString(route.host)
+        let hint = duplicateCString("")
         allocatedStrings.append(target)
         allocatedStrings.append(host)
         allocatedStrings.append(hint)
@@ -543,4 +626,25 @@ private func applyRoutes(
             operation: "apply route snapshot"
         )
     }
+}
+
+private func duplicateCString(_ value: String) -> UnsafeMutablePointer<CChar> {
+    let bytes = value.utf8CString
+    let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count)
+    bytes.withUnsafeBufferPointer { buffer in
+        pointer.initialize(from: buffer.baseAddress!, count: buffer.count)
+    }
+    return pointer
+}
+
+private func emptyHostHandles() -> coakka_swift_host_handles_t {
+    var handles = coakka_swift_host_handles_t()
+    handles.struct_size = MemoryLayout<coakka_swift_host_handles_t>.size
+    handles.request_write_fd = -1
+    handles.response_read_fd = -1
+    handles.deadletter_read_fd = -1
+    handles.control_write_fd = -1
+    handles.monitor_read_fd = -1
+    handles.delivered_request_read_fd = -1
+    return handles
 }

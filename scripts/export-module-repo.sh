@@ -35,9 +35,11 @@ mkdir -p "${dest_dir}"
 tar \
   --exclude './.build' \
   --exclude './.swiftpm' \
+  --exclude './coakka-runtime-swift-*.tar.gz' \
   -C "${swift_root}" \
   -cf - . | tar -C "${dest_dir}" -xf -
 
 echo "[swift-export-runtime-module] module=${dest_dir}"
 echo "[swift-export-runtime-module] path=github.com/phuong-tran/coakka-runtime-swift"
-echo "[swift-export-runtime-module] native=1.3.4+dc6ec284"
+echo "[swift-export-runtime-module] native=1.4.0+2cee86bf"
+echo "[swift-export-runtime-module] signing=absent"

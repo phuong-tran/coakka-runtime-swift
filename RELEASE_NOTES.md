@@ -1,6 +1,6 @@
 # Swift Connector Release Notes
 
-## 1.4.0
+## 1.4.1
 
 - Exact Swift views for all eleven public transport ABI blocks.
 - Capability-driven startup connection/security policy before handle export.
@@ -10,7 +10,7 @@
 - Native loading for macOS, Linux, and Windows without POSIX-only bridge APIs.
 - Function-level C bridge documentation for lifecycle, ownership, blocking,
   thread serialization, atomicity, and capability-gated errors.
-- Exact three-platform payload with digest and binary-format gates.
+- Exact five-platform payload with digest and binary-format gates.
 
 Swift tests, request/reply, transport rejection, and TLS reload pass
 on macOS ARM64. Linux ARM64 and Windows x86-64 package payloads are included;

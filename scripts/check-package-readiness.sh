@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-package_version="1.4.0"
+package_version="1.4.1"
 archive="${swift_root}/coakka-runtime-swift-${package_version}.tar.gz"
 work_root="$(mktemp -d "${TMPDIR:-/tmp}/coakka-swift-package.XXXXXX")"
 package_root="${work_root}/coakka-runtime-swift-${package_version}"
@@ -28,6 +28,8 @@ required=(
   scripts/check-platform-bridge-source.sh
   Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib
   Sources/CoAkkaRuntime/Resources/linux-aarch64/libcoakka_runtime_v2.so
+  Sources/CoAkkaRuntime/Resources/linux-x86_64/libcoakka_runtime_v2.so
+  Sources/CoAkkaRuntime/Resources/windows-aarch64/libcoakka_runtime_v2.dll
   Sources/CoAkkaRuntime/Resources/windows-x86_64/libcoakka_runtime_v2.dll
 )
 for file in "${required[@]}"; do
@@ -52,12 +54,14 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     metadata = json.load(stream)
 
-assert metadata["artifact_version"] == "1.4.0"
-assert metadata["bundled_native_package_version"] == "1.4.0+2cee86bf"
+assert metadata["artifact_version"] == "1.4.1"
+assert metadata["bundled_native_package_version"] == "1.4.1+9e02a51d"
 assert metadata["publisher_signing"] == "absent"
 assert metadata["supported_platforms"] == [
     "macos-aarch64",
     "linux-aarch64",
+    "linux-x86_64",
+    "windows-aarch64",
     "windows-x86_64",
 ]
 PY

@@ -15,8 +15,8 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `1.4.0`<br>
-Bundled runtime: `1.4.0+2cee86bf`; publisher signing: absent.
+Current source version: `1.4.1`<br>
+Bundled runtime: `1.4.1+9e02a51d`; publisher signing: absent.
 
 ## Ecosystem
 

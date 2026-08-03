@@ -1,7 +1,7 @@
 # Releasing The Swift Connector
 
-Current source version is `1.4.0`, paired with native
-generation `1.4.0+2cee86bf`; publisher signing is absent.
+Current source version is `1.4.1`, paired with native
+generation `1.4.1+9e02a51d`; publisher signing is absent.
 
 ## Package Verification
 
@@ -15,8 +15,8 @@ bash scripts/smoke-consumer.sh
 bash scripts/check-package-readiness.sh
 ```
 
-The package contains the exact macOS ARM64 dylib, Linux
-ARM64 shared object, and Windows x86-64 DLL. All three digests are fixed in the
+The package contains the exact macOS ARM64 dylib, both Linux shared objects,
+and both Windows DLLs. All five digests are fixed in the
 verifier. Package presence and source compilation are not Linux/Windows Swift
 execution evidence.
 

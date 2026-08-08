@@ -12,16 +12,16 @@ not the whole product surface.
 | [`coakka-publish`](https://github.com/phuong-tran/coakka-publish) | Public artifact mirror, release notes, compatibility matrix, package-manager status, checksums, and tool downloads. |
 | [`coakka-runtime-go`](https://github.com/phuong-tran/coakka-runtime-go) | Go module for CoAkka Runtime. |
 | [`coakka-logger-go`](https://github.com/phuong-tran/coakka-logger-go) | Go module for CoAkka Logger. |
-| [`coakka-runtime-swift`](https://github.com/phuong-tran/coakka-runtime-swift) | SwiftPM package for CoAkka Runtime on macOS ARM64. |
+| [`coakka-runtime-swift`](https://github.com/phuong-tran/coakka-runtime-swift) | SwiftPM package for CoAkka Runtime. |
 | [`coakka-logger-swift`](https://github.com/phuong-tran/coakka-logger-swift) | SwiftPM package for CoAkka Logger on macOS ARM64. |
 
 ## Package-Manager Surfaces
 
 | Channel | Runtime entrypoint | Logger entrypoint |
 | --- | --- | --- |
-| NuGet | [`CoAkka.Runtime` 1.3.5](https://www.nuget.org/packages/CoAkka.Runtime/1.3.5) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
-| npm | [`coakka-v2-connector-node` 1.3.11](https://www.npmjs.com/package/coakka-v2-connector-node/v/1.3.11) | [`coakka-logger-node` 1.2.6](https://www.npmjs.com/package/coakka-logger-node/v/1.2.6) |
-| PyPI | [`coakka-v2-connector` 1.3.6](https://pypi.org/project/coakka-v2-connector/1.3.6/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
+| NuGet | [`CoAkka.Runtime` 1.4.7](https://www.nuget.org/packages/CoAkka.Runtime/1.4.7) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
+| npm | [`coakka-v2-connector-node` 1.4.6](https://www.npmjs.com/package/coakka-v2-connector-node/v/1.4.6) | [`coakka-logger-node` 1.2.6](https://www.npmjs.com/package/coakka-logger-node/v/1.2.6) |
+| PyPI | [`coakka-v2-connector` 1.4.6](https://pypi.org/project/coakka-v2-connector/1.4.6/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
 | Go modules | [`coakka-runtime-go` v1.4.1](https://pkg.go.dev/github.com/phuong-tran/coakka-runtime-go@v1.4.1) | [`coakka-logger-go` v1.2.5](https://pkg.go.dev/github.com/phuong-tran/coakka-logger-go@v1.2.5) |
 | SwiftPM | [`coakka-runtime-swift` v1.4.1](https://github.com/phuong-tran/coakka-runtime-swift/releases/tag/v1.4.1) | [`coakka-logger-swift` v1.2.1](https://github.com/phuong-tran/coakka-logger-swift/releases/tag/v1.2.1) |
 | Maven-style tree | JVM runtime, logger, Spring Boot starter, and Quarkus extension artifacts. |

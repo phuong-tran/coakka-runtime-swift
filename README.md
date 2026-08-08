@@ -32,17 +32,23 @@ deployments. Use the public
 [Ecosystem Overview](https://github.com/phuong-tran/coakka-publish/blob/main/docs/ecosystem-overview.md)
 and [Compatibility Matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md)
 for exact package and native-platform evidence.
+The [package and platform evidence ledger](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-package-platform-evidence.md)
+separates payload presence, verification, matching-host execution, and known
+release limitations.
 Start with the [CoAkka Documentation](https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md)
 for concepts, integration paths, operations, and runnable samples.
 
 | Package target | Included native | Package evidence |
 | --- | --- | --- |
 | macOS ARM64 | `libcoakka_runtime_v2.dylib` | Swift tests, request/reply, transport, and TLS reload pass |
-| Linux ARM64 | `libcoakka_runtime_v2.so` | Exact digest and ELF format pass; this package receipt makes no Swift execution claim |
-| Windows x86-64 | `libcoakka_runtime_v2.dll` | Exact digest and PE format pass; this package receipt makes no Swift execution claim |
+| Linux ARM64 | `libcoakka_runtime_v2.so` | Exact digest, ELF format, and strict C-bridge compilation pass; no Swift toolchain execution claim |
+| Linux x86-64 | `libcoakka_runtime_v2.so` | Exact digest, ELF format, and strict C-bridge compilation pass; no Swift toolchain execution claim |
+| Windows ARM64 | `libcoakka_runtime_v2.dll` | Exact digest and PE format pass; no Swift toolchain execution claim |
+| Windows x86-64 | `libcoakka_runtime_v2.dll` | Exact digest and PE format pass; no Swift toolchain execution claim |
 
 Linux remains the primary deployment target for the runtime ecosystem. The
-Swift package still includes Windows and macOS alongside Linux; a
+Swift package includes both supported CPU architectures for Linux and Windows
+alongside macOS ARM64; a
 platform-specific execution result does not remove another platform from the
 distribution.
 
@@ -105,8 +111,10 @@ bash scripts/smoke-consumer.sh
 bash scripts/check-package-readiness.sh
 ```
 
-These checks verify source, the exact native payloads, the macOS consumer path,
-and the cross-platform C bridge source boundary.
+These checks verify source, all five exact native payloads, the macOS Swift
+consumer path, and the cross-platform C bridge source boundary. They do not
+turn bridge compilation on Linux or payload inspection on Windows into a Swift
+execution claim.
 
 ## C Bridge Contract
 

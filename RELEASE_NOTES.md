@@ -1,5 +1,17 @@
 # Swift Connector Release Notes
 
+## 2.1.0
+
+- Added `FileLane` with typed sender/receiver configuration, SHA-256, receive
+  preparation, send submission, blocking progress waits, cancellation,
+  terminal-record cleanup, stats, and explicit close.
+- Embedded exact native generation `2.1.0+60ddf70d` for Linux ARM64/x86-64,
+  macOS ARM64, and Windows ARM64/x86-64.
+- Verified Swift build, package payloads, clean macOS consumer execution, and a
+  multi-quantum macOS ARM64 file transfer with SHA-256 equality.
+- Kept paths, authorization tokens, and TLS credential material out of copied
+  transfer snapshots.
+
 ## 1.4.1
 
 - Exact Swift views for all eleven public transport ABI blocks.

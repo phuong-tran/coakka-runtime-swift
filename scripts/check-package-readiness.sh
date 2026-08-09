@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-package_version="1.4.1"
+package_version="2.1.0"
 archive="${swift_root}/coakka-runtime-swift-${package_version}.tar.gz"
 work_root="$(mktemp -d "${TMPDIR:-/tmp}/coakka-swift-package.XXXXXX")"
 package_root="${work_root}/coakka-runtime-swift-${package_version}"
@@ -22,6 +22,7 @@ required=(
   RELEASE_NOTES.md
   TRANSPORT_CONFIGURATION.md
   coakka-runtime-package.json
+  Sources/CoAkkaRuntime/FileLane.swift
   Sources/CoAkkaRuntime/RuntimeTransport.swift
   Sources/CoAkkaRuntimeC/coakka_runtime_bridge.c
   Sources/CoAkkaRuntimeTransportSmoke/main.swift
@@ -54,8 +55,8 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     metadata = json.load(stream)
 
-assert metadata["artifact_version"] == "1.4.1"
-assert metadata["bundled_native_package_version"] == "1.4.1+9e02a51d"
+assert metadata["artifact_version"] == "2.1.0"
+assert metadata["bundled_native_package_version"] == "2.1.0+60ddf70d"
 assert metadata["publisher_signing"] == "absent"
 assert metadata["supported_platforms"] == [
     "macos-aarch64",

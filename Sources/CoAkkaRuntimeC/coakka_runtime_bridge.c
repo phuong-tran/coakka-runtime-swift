@@ -328,6 +328,52 @@ void coakka_swift_runtime_library_close(coakka_swift_runtime_library_t *library)
     free(lib);
 }
 
+typedef struct { size_t struct_size; const char *id; const char *token; const char *path; uint64_t size; uint8_t sha[32]; } swift_native_file_receive_t;
+typedef struct { size_t struct_size; const char *id; const char *token; const char *host; uint16_t port; const char *path; uint64_t size; uint8_t sha[32]; uint32_t timeout; } swift_native_file_send_t;
+typedef int32_t (*swift_file_create_fn)(const coakka_swift_file_lane_config_t *, coakka_swift_file_lane_t **);
+typedef void (*swift_file_destroy_fn)(coakka_swift_file_lane_t *);
+typedef int32_t (*swift_file_simple_fn)(coakka_swift_file_lane_t *);
+typedef int32_t (*swift_file_port_fn)(coakka_swift_file_lane_t *, uint16_t *);
+typedef int32_t (*swift_file_prepare_fn)(coakka_swift_file_lane_t *, const swift_native_file_receive_t *);
+typedef int32_t (*swift_file_submit_fn)(coakka_swift_file_lane_t *, const swift_native_file_send_t *);
+typedef int32_t (*swift_file_get_fn)(coakka_swift_file_lane_t *, const char *, uint32_t, coakka_swift_file_transfer_snapshot_t *);
+typedef int32_t (*swift_file_wait_fn)(coakka_swift_file_lane_t *, const char *, uint32_t, uint64_t, uint32_t, coakka_swift_file_transfer_snapshot_t *);
+typedef int32_t (*swift_file_control_fn)(coakka_swift_file_lane_t *, const char *, uint32_t);
+typedef int32_t (*swift_file_stats_fn)(coakka_swift_file_lane_t *, coakka_swift_file_lane_stats_t *);
+typedef int32_t (*swift_file_sha_fn)(const char *, uint8_t[32], uint64_t *);
+
+#define SWIFT_FILE_SYMBOL(lib, type, name) ((type)platform_library_symbol((lib)->handle, (name)))
+int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library) {
+    runtime_library_t *lib = as_library(library);
+    return lib != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_create_fn, "coakka_v2_file_lane_create_ex") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_destroy_fn, "coakka_v2_file_lane_destroy") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_simple_fn, "coakka_v2_file_lane_start") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_simple_fn, "coakka_v2_file_lane_stop") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_port_fn, "coakka_v2_file_lane_get_bound_port") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_prepare_fn, "coakka_v2_file_lane_prepare_receive") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_submit_fn, "coakka_v2_file_lane_submit_send") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_get_fn, "coakka_v2_file_lane_get_transfer") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_wait_fn, "coakka_v2_file_lane_wait_transfer") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_control_fn, "coakka_v2_file_lane_cancel_transfer") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_control_fn, "coakka_v2_file_lane_forget_transfer") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_stats_fn, "coakka_v2_file_lane_get_stats") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_sha_fn, "coakka_v2_file_sha256_path") != NULL;
+}
+int32_t coakka_swift_file_lane_create(coakka_swift_runtime_library_t *library,const coakka_swift_file_lane_config_t *config,coakka_swift_file_lane_t **out){runtime_library_t *lib=as_library(library);swift_file_create_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_create_fn,"coakka_v2_file_lane_create_ex"):NULL;return f?f(config,out):COAKKA_SWIFT_ERR_SYMBOL;}
+void coakka_swift_file_lane_destroy(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_destroy_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_destroy_fn,"coakka_v2_file_lane_destroy"):NULL;if(f)f(lane);}
+int32_t coakka_swift_file_lane_start(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_simple_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_simple_fn,"coakka_v2_file_lane_start"):NULL;return f?f(lane):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_stop(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_simple_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_simple_fn,"coakka_v2_file_lane_stop"):NULL;return f?f(lane):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_get_bound_port(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,uint16_t*out){runtime_library_t*lib=as_library(library);swift_file_port_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_port_fn,"coakka_v2_file_lane_get_bound_port"):NULL;return f?f(lane,out):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_prepare_receive(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,const char*id,const char*token,const char*path,uint64_t size,const uint8_t sha[32]){runtime_library_t*lib=as_library(library);swift_file_prepare_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_prepare_fn,"coakka_v2_file_lane_prepare_receive"):NULL;if(!f||!sha)return COAKKA_SWIFT_ERR_SYMBOL;swift_native_file_receive_t s={sizeof(s),id,token,path,size,{0}};memcpy(s.sha,sha,32);return f(lane,&s);}
+int32_t coakka_swift_file_lane_submit_send(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,const char*id,const char*token,const char*host,uint16_t port,const char*path,uint64_t size,const uint8_t sha[32],uint32_t timeout){runtime_library_t*lib=as_library(library);swift_file_submit_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_submit_fn,"coakka_v2_file_lane_submit_send"):NULL;if(!f||!sha)return COAKKA_SWIFT_ERR_SYMBOL;swift_native_file_send_t s={sizeof(s),id,token,host,port,path,size,{0},timeout};memcpy(s.sha,sha,32);return f(lane,&s);}
+int32_t coakka_swift_file_lane_get_transfer(coakka_swift_runtime_library_t*library,coakka_swift_file_lane_t*lane,const char*id,uint32_t d,coakka_swift_file_transfer_snapshot_t*out){runtime_library_t*lib=as_library(library);swift_file_get_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_get_fn,"coakka_v2_file_lane_get_transfer"):NULL;if(out){memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);}return f?f(lane,id,d,out):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_wait_transfer(coakka_swift_runtime_library_t*library,coakka_swift_file_lane_t*lane,const char*id,uint32_t d,uint64_t seq,uint32_t ms,coakka_swift_file_transfer_snapshot_t*out){runtime_library_t*lib=as_library(library);swift_file_wait_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_wait_fn,"coakka_v2_file_lane_wait_transfer"):NULL;if(out){memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);}return f?f(lane,id,d,seq,ms,out):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_cancel(coakka_swift_runtime_library_t*l,coakka_swift_file_lane_t*lane,const char*id,uint32_t d){runtime_library_t*lib=as_library(l);swift_file_control_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_control_fn,"coakka_v2_file_lane_cancel_transfer"):NULL;return f?f(lane,id,d):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_forget(coakka_swift_runtime_library_t*l,coakka_swift_file_lane_t*lane,const char*id,uint32_t d){runtime_library_t*lib=as_library(l);swift_file_control_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_control_fn,"coakka_v2_file_lane_forget_transfer"):NULL;return f?f(lane,id,d):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_get_stats(coakka_swift_runtime_library_t*l,coakka_swift_file_lane_t*lane,coakka_swift_file_lane_stats_t*out){runtime_library_t*lib=as_library(l);swift_file_stats_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_stats_fn,"coakka_v2_file_lane_get_stats"):NULL;if(out){memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);}return f?f(lane,out):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_sha256_path(coakka_swift_runtime_library_t*l,const char*path,uint8_t out[32],uint64_t*size){runtime_library_t*lib=as_library(l);swift_file_sha_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_sha_fn,"coakka_v2_file_sha256_path"):NULL;return f?f(path,out,size):COAKKA_SWIFT_ERR_SYMBOL;}
+
 uint32_t coakka_swift_runtime_get_abi_version(coakka_swift_runtime_library_t *library) {
     runtime_library_t *lib = as_library(library);
     return lib == NULL ? 0 : lib->get_abi_version();

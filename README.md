@@ -15,8 +15,8 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `1.4.1`<br>
-Bundled runtime: `1.4.1+9e02a51d`; publisher signing: absent.
+Current source version: `2.1.0`<br>
+Bundled runtime: `2.1.0+60ddf70d`; publisher signing: absent.
 
 ## Ecosystem
 
@@ -137,3 +137,9 @@ ticket use, and frame-reader use from racing.
 
 The connector source license is in [LICENSE](LICENSE). Native artifact terms
 are described in [NATIVE-LICENSE.md](NATIVE-LICENSE.md).
+
+## File Lane
+
+`FileLane.open(...)` exposes the independent native bulk-transfer lane through
+the C bridge. Native waits are blocking. See the shared
+[file-lane contract](https://github.com/phuong-tran/coakkaJVMConnector/blob/main/FILE_LANE.md) for ownership and release requirements.

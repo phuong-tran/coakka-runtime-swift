@@ -107,6 +107,33 @@ typedef struct coakka_swift_runtime_t coakka_swift_runtime_t;
 typedef struct coakka_swift_ask_client_t coakka_swift_ask_client_t;
 typedef struct coakka_swift_ask_ticket_t coakka_swift_ask_ticket_t;
 typedef struct coakka_swift_frame_reader_t coakka_swift_frame_reader_t;
+typedef struct coakka_swift_file_lane_t coakka_swift_file_lane_t;
+
+typedef struct coakka_swift_file_lane_security_config_t {
+    size_t struct_size; uint32_t mode; uint32_t reserved; uint64_t credential_generation;
+    const char *credential_id; const char *ca_certificate_file; const char *identity_certificate_file; const char *private_key_file;
+} coakka_swift_file_lane_security_config_t;
+
+typedef struct coakka_swift_file_lane_config_t {
+    size_t struct_size; uint32_t flags; const char *bind_host; uint16_t bind_port; size_t queue_capacity;
+    uint64_t max_file_size; uint32_t io_timeout_ms; uint64_t checkpoint_bytes; uint64_t progress_bytes;
+    uint32_t progress_interval_ms; uint32_t sender_worker_count; uint32_t receiver_worker_count;
+    const coakka_swift_file_lane_security_config_t *security;
+} coakka_swift_file_lane_config_t;
+
+typedef struct coakka_swift_file_transfer_snapshot_t {
+    size_t struct_size; uint32_t direction; uint32_t state; uint32_t result; uint64_t expected_size;
+    uint64_t transferred_bytes; uint64_t committed_offset; uint32_t progress_milli; uint32_t cancel_requested;
+    uint64_t update_sequence; uint64_t submitted_mono_ns; uint64_t started_mono_ns; uint64_t updated_mono_ns;
+    uint64_t terminal_mono_ns; char detail[160];
+} coakka_swift_file_transfer_snapshot_t;
+
+typedef struct coakka_swift_file_lane_stats_t {
+    size_t struct_size; size_t queue_capacity; size_t queued_sends; size_t prepared_receives; size_t active_sends;
+    size_t active_receives; size_t retained_records; uint64_t submitted_sends; uint64_t prepared_receive_count;
+    uint64_t completed_sends; uint64_t completed_receives; uint64_t failed_sends; uint64_t failed_receives;
+    uint64_t canceled_transfers; uint64_t completed_send_bytes; uint64_t completed_receive_bytes;
+} coakka_swift_file_lane_stats_t;
 
 typedef struct coakka_swift_host_handles_t {
     size_t struct_size;
@@ -608,6 +635,21 @@ int32_t coakka_swift_frame_read_try(coakka_swift_runtime_library_t *library,
 /** Releases a frame buffer returned by coakka_swift_frame_read_try(). */
 void coakka_swift_frame_release(coakka_swift_runtime_library_t *library,
                                 uint8_t *buf);
+
+int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library);
+int32_t coakka_swift_file_lane_create(coakka_swift_runtime_library_t *library, const coakka_swift_file_lane_config_t *config, coakka_swift_file_lane_t **out_lane);
+void coakka_swift_file_lane_destroy(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
+int32_t coakka_swift_file_lane_start(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
+int32_t coakka_swift_file_lane_stop(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
+int32_t coakka_swift_file_lane_get_bound_port(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, uint16_t *out_port);
+int32_t coakka_swift_file_lane_prepare_receive(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, const char *token, const char *path, uint64_t size, const uint8_t sha256[32]);
+int32_t coakka_swift_file_lane_submit_send(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, const char *token, const char *host, uint16_t port, const char *path, uint64_t size, const uint8_t sha256[32], uint32_t timeout_ms);
+int32_t coakka_swift_file_lane_get_transfer(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction, coakka_swift_file_transfer_snapshot_t *out_snapshot);
+int32_t coakka_swift_file_lane_wait_transfer(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction, uint64_t after_sequence, uint32_t timeout_ms, coakka_swift_file_transfer_snapshot_t *out_snapshot);
+int32_t coakka_swift_file_lane_cancel(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction);
+int32_t coakka_swift_file_lane_forget(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction);
+int32_t coakka_swift_file_lane_get_stats(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, coakka_swift_file_lane_stats_t *out_stats);
+int32_t coakka_swift_file_sha256_path(coakka_swift_runtime_library_t *library, const char *path, uint8_t out_sha256[32], uint64_t *out_size);
 
 #ifdef __cplusplus
 }

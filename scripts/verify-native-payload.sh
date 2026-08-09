@@ -32,23 +32,23 @@ verify_native() {
 
 verify_native \
   "macos-aarch64/libcoakka_runtime_v2.dylib" \
-  "5935b613a7e9ff3662712d9af1c68d24d34460a58d5900d47d5a12341e754d79" \
+  "e95cda46cd8e5d31633d005bb8af9093b2a93c9c2d0cefc90148e188f31da6d7" \
   "Mach-O 64-bit dynamically linked shared library arm64"
 verify_native \
   "linux-aarch64/libcoakka_runtime_v2.so" \
-  "686666fed7211e959cee2512374a5c1083bb90805a894f2e471655a14d1af1dd" \
+  "3c0cc47250e3c4ebb71633af85d205adb7bf2606d58abba0bf893a770dfde48c" \
   "ELF 64-bit LSB shared object, ARM aarch64"
 verify_native \
   "linux-x86_64/libcoakka_runtime_v2.so" \
-  "cdf36ac53578b81ade018c26d45794ff9cccebda3a72fec7a3ead27880dbb4f9" \
+  "7d8781b8eae6948eee968e422dd2097dfee43d788c4cb4a3fb3e8936bd214815" \
   "ELF 64-bit LSB shared object, x86-64"
 verify_native \
   "windows-aarch64/libcoakka_runtime_v2.dll" \
-  "ce3d54b3f4046e13a27d099758a4a1c4991cc6fd7e87e1836b129d7d633562e3" \
+  "e932f870f6dd15fd36612f0ce404e4906faff47766f6ed40c328d4e12a69ebf0" \
   "PE32\\+ executable \\(DLL\\).*Aarch64"
 verify_native \
   "windows-x86_64/libcoakka_runtime_v2.dll" \
-  "4cd5cdc8c43f84b1f5fb3fa49113e8de900d94aff35b8a6bed0ea6566c51b186" \
+  "dc9d352144fefb2d6789bc3ea49dd6fe1b3bb627be4f1277944bc51d49e2f3f9" \
   "PE32\\+ executable \\(DLL\\).*x86-64"
 
 entries="$(find "${resource_root}" -type f \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' \) | sort)"

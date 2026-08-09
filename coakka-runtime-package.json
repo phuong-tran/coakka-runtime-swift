@@ -1,6 +1,6 @@
 {
   "artifact_name": "coakka-runtime-swift",
-  "artifact_version": "2.1.0",
+  "artifact_version": "2.1.1",
   "bundled_native_core_version": "2.1.0",
   "bundled_native_package_version": "2.1.0+60ddf70d",
   "bundled_native_git_commit": "60ddf70d",

@@ -1,5 +1,13 @@
 # Swift Connector Release Notes
 
+## 2.1.1
+
+- Kept native generation `2.1.0+60ddf70d` unchanged.
+- Replaced the private connector-repository link with the canonical public
+  file-lane contract.
+- Added package-readiness checks that require the public contract and reject
+  private repository references in the exported README.
+
 ## 2.1.0
 
 - Added `FileLane` with typed sender/receiver configuration, SHA-256, receive

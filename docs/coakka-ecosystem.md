@@ -19,7 +19,7 @@ not the whole product surface.
 
 | Channel | Runtime entrypoint | Logger entrypoint |
 | --- | --- | --- |
-| NuGet | [`CoAkka.Runtime` 2.1.0](https://www.nuget.org/packages/CoAkka.Runtime/2.1.0) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
+| NuGet | [`CoAkka.Runtime` 2.3.0](https://www.nuget.org/packages/CoAkka.Runtime/2.3.0) | [`CoAkka.Logger` 1.2.2](https://www.nuget.org/packages/CoAkka.Logger/1.2.2) |
 | npm | [`coakka-v2-connector-node` 2.3.0](https://www.npmjs.com/package/coakka-v2-connector-node/v/2.3.0) | [`coakka-logger-node` 1.2.6](https://www.npmjs.com/package/coakka-logger-node/v/1.2.6) |
 | npm (Bun) | [`coakka-v2-connector-bun` 2.3.0](https://www.npmjs.com/package/coakka-v2-connector-bun/v/2.3.0) | [`coakka-logger-bun` 1.2.6](https://www.npmjs.com/package/coakka-logger-bun/v/1.2.6) |
 | npm (Electron) | [`coakka-v2-connector-electron` 2.3.0](https://www.npmjs.com/package/coakka-v2-connector-electron/v/2.3.0) | [`coakka-logger-electron` 1.2.6](https://www.npmjs.com/package/coakka-logger-electron/v/1.2.6) |

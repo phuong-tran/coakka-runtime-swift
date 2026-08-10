@@ -85,6 +85,7 @@ CoAkka makes the boundary explicit:
 
 ## Read Next
 
+- AI-assisted integration: `https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md`
 - Runtime model: `https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-message-and-routing-model.md`
 - How it works: `https://github.com/phuong-tran/coakka-samples/blob/main/docs/how-it-works.md`
 - Incremental adoption: `https://github.com/phuong-tran/coakka-samples/blob/main/docs/incremental-adoption.md`

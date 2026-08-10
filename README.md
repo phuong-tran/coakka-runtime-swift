@@ -144,3 +144,12 @@ are described in [NATIVE-LICENSE.md](NATIVE-LICENSE.md).
 the C bridge. Native waits are blocking. See the shared
 [file-lane contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-file-transfer.md)
 for ownership and release requirements.
+
+## Continue Integrating
+
+Use the runnable Swift sample and
+[AI-Assisted Integration](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md)
+before generating connection strategy, TLS/mTLS, File Lane, or Stream Lane
+code. SwiftPM `2.1.1` includes File Lane. Stream Lane remains an exact-source
+integration until a matching public tag is promoted; do not attach its imports
+to SwiftPM `2.1.1`.

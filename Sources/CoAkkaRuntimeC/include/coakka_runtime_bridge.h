@@ -108,32 +108,182 @@ typedef struct coakka_swift_ask_client_t coakka_swift_ask_client_t;
 typedef struct coakka_swift_ask_ticket_t coakka_swift_ask_ticket_t;
 typedef struct coakka_swift_frame_reader_t coakka_swift_frame_reader_t;
 typedef struct coakka_swift_file_lane_t coakka_swift_file_lane_t;
+typedef struct coakka_swift_stream_lane_t coakka_swift_stream_lane_t;
 
 typedef struct coakka_swift_file_lane_security_config_t {
-    size_t struct_size; uint32_t mode; uint32_t reserved; uint64_t credential_generation;
-    const char *credential_id; const char *ca_certificate_file; const char *identity_certificate_file; const char *private_key_file;
+  size_t struct_size;
+  uint32_t mode;
+  uint32_t reserved;
+  uint64_t credential_generation;
+  const char *credential_id;
+  const char *ca_certificate_file;
+  const char *identity_certificate_file;
+  const char *private_key_file;
 } coakka_swift_file_lane_security_config_t;
 
 typedef struct coakka_swift_file_lane_config_t {
-    size_t struct_size; uint32_t flags; const char *bind_host; uint16_t bind_port; size_t queue_capacity;
-    uint64_t max_file_size; uint32_t io_timeout_ms; uint64_t checkpoint_bytes; uint64_t progress_bytes;
-    uint32_t progress_interval_ms; uint32_t sender_worker_count; uint32_t receiver_worker_count;
-    const coakka_swift_file_lane_security_config_t *security;
+  size_t struct_size;
+  uint32_t flags;
+  const char *bind_host;
+  uint16_t bind_port;
+  size_t queue_capacity;
+  uint64_t max_file_size;
+  uint32_t io_timeout_ms;
+  uint64_t checkpoint_bytes;
+  uint64_t progress_bytes;
+  uint32_t progress_interval_ms;
+  uint32_t sender_worker_count;
+  uint32_t receiver_worker_count;
+  const coakka_swift_file_lane_security_config_t *security;
 } coakka_swift_file_lane_config_t;
 
 typedef struct coakka_swift_file_transfer_snapshot_t {
-    size_t struct_size; uint32_t direction; uint32_t state; uint32_t result; uint64_t expected_size;
-    uint64_t transferred_bytes; uint64_t committed_offset; uint32_t progress_milli; uint32_t cancel_requested;
-    uint64_t update_sequence; uint64_t submitted_mono_ns; uint64_t started_mono_ns; uint64_t updated_mono_ns;
-    uint64_t terminal_mono_ns; char detail[160];
+  size_t struct_size;
+  uint32_t direction;
+  uint32_t state;
+  uint32_t result;
+  uint64_t expected_size;
+  uint64_t transferred_bytes;
+  uint64_t committed_offset;
+  uint32_t progress_milli;
+  uint32_t cancel_requested;
+  uint64_t update_sequence;
+  uint64_t submitted_mono_ns;
+  uint64_t started_mono_ns;
+  uint64_t updated_mono_ns;
+  uint64_t terminal_mono_ns;
+  char detail[160];
 } coakka_swift_file_transfer_snapshot_t;
 
 typedef struct coakka_swift_file_lane_stats_t {
-    size_t struct_size; size_t queue_capacity; size_t queued_sends; size_t prepared_receives; size_t active_sends;
-    size_t active_receives; size_t retained_records; uint64_t submitted_sends; uint64_t prepared_receive_count;
-    uint64_t completed_sends; uint64_t completed_receives; uint64_t failed_sends; uint64_t failed_receives;
-    uint64_t canceled_transfers; uint64_t completed_send_bytes; uint64_t completed_receive_bytes;
+  size_t struct_size;
+  size_t queue_capacity;
+  size_t queued_sends;
+  size_t prepared_receives;
+  size_t active_sends;
+  size_t active_receives;
+  size_t retained_records;
+  uint64_t submitted_sends;
+  uint64_t prepared_receive_count;
+  uint64_t completed_sends;
+  uint64_t completed_receives;
+  uint64_t failed_sends;
+  uint64_t failed_receives;
+  uint64_t canceled_transfers;
+  uint64_t completed_send_bytes;
+  uint64_t completed_receive_bytes;
 } coakka_swift_file_lane_stats_t;
+
+typedef struct coakka_swift_stream_frame_t {
+  size_t struct_size;
+  uint64_t sequence;
+  uint64_t captured_mono_ns;
+  uint64_t dropped_before;
+  uint32_t flags;
+  size_t size;
+} coakka_swift_stream_frame_t;
+
+typedef int32_t (*coakka_swift_stream_source_fn)(
+    void *context, uint8_t *destination, size_t capacity,
+    coakka_swift_stream_frame_t *out_frame);
+typedef int32_t (*coakka_swift_stream_consumer_fn)(
+    void *context, const uint8_t *data,
+    const coakka_swift_stream_frame_t *frame);
+
+typedef struct coakka_swift_stream_security_config_t {
+  size_t struct_size;
+  uint32_t mode;
+  uint32_t reserved;
+  uint64_t credential_generation;
+  const char *credential_id;
+  const char *ca_certificate_file;
+  const char *identity_certificate_file;
+  const char *private_key_file;
+} coakka_swift_stream_security_config_t;
+
+typedef struct coakka_swift_stream_config_t {
+  size_t struct_size;
+  uint32_t flags;
+  const char *bind_host;
+  uint16_t bind_port;
+  size_t capacity;
+  uint32_t max_frame_bytes;
+  uint32_t max_window_bytes;
+  uint32_t io_timeout_ms;
+  uint32_t source_retry_ms;
+  uint32_t progress_frames;
+  uint32_t progress_interval_ms;
+  uint32_t publisher_worker_count;
+  uint32_t subscriber_worker_count;
+  const coakka_swift_stream_security_config_t *security;
+  uint32_t pressure_after_ms;
+  uint32_t stalled_after_ms;
+  uint32_t recovery_after_ms;
+  uint32_t pressure_observation_ms;
+} coakka_swift_stream_config_t;
+
+typedef struct coakka_swift_stream_session_snapshot_t {
+  size_t struct_size;
+  uint32_t direction;
+  uint32_t state;
+  uint32_t result;
+  uint64_t format_id;
+  uint64_t frames;
+  uint64_t bytes;
+  uint64_t dropped_frames;
+  uint64_t last_sequence;
+  uint32_t negotiated_max_frame_bytes;
+  uint32_t window_bytes;
+  uint32_t cancel_requested;
+  uint64_t update_sequence;
+  uint64_t submitted_mono_ns;
+  uint64_t started_mono_ns;
+  uint64_t updated_mono_ns;
+  uint64_t terminal_mono_ns;
+  char detail[160];
+} coakka_swift_stream_session_snapshot_t;
+
+typedef struct coakka_swift_stream_pressure_snapshot_t {
+  size_t struct_size;
+  uint32_t direction;
+  uint32_t state;
+  uint32_t reason_bits;
+  uint32_t available_credit_bytes;
+  uint32_t window_capacity_bytes;
+  uint64_t update_sequence;
+  uint64_t transition_count;
+  uint64_t observed_mono_ns;
+  uint64_t state_started_mono_ns;
+  uint64_t pressure_started_mono_ns;
+  uint64_t last_progress_mono_ns;
+  uint64_t observed_delivery_bps;
+  uint64_t current_operation_ns;
+  uint64_t last_operation_ns;
+  uint64_t total_pressured_ns;
+  uint64_t max_pressured_ns;
+} coakka_swift_stream_pressure_snapshot_t;
+
+typedef struct coakka_swift_stream_stats_t {
+  size_t struct_size;
+  size_t capacity;
+  size_t queued_subscribers;
+  size_t prepared_publishers;
+  size_t active_publishers;
+  size_t active_subscribers;
+  size_t retained_records;
+  uint64_t submitted_subscribers;
+  uint64_t prepared_publisher_count;
+  uint64_t ended_publishers;
+  uint64_t ended_subscribers;
+  uint64_t failed_publishers;
+  uint64_t failed_subscribers;
+  uint64_t canceled_sessions;
+  uint64_t published_frames;
+  uint64_t published_bytes;
+  uint64_t consumed_frames;
+  uint64_t consumed_bytes;
+  uint64_t source_reported_drops;
+} coakka_swift_stream_stats_t;
 
 typedef struct coakka_swift_host_handles_t {
     size_t struct_size;
@@ -650,6 +800,56 @@ int32_t coakka_swift_file_lane_cancel(coakka_swift_runtime_library_t *library, c
 int32_t coakka_swift_file_lane_forget(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction);
 int32_t coakka_swift_file_lane_get_stats(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, coakka_swift_file_lane_stats_t *out_stats);
 int32_t coakka_swift_file_sha256_path(coakka_swift_runtime_library_t *library, const char *path, uint8_t out_sha256[32], uint64_t *out_size);
+
+int32_t coakka_swift_stream_available(coakka_swift_runtime_library_t *library);
+int32_t coakka_swift_stream_create(coakka_swift_runtime_library_t *library,
+                                   const coakka_swift_stream_config_t *config,
+                                   coakka_swift_stream_lane_t **out_lane);
+void coakka_swift_stream_destroy(coakka_swift_runtime_library_t *library,
+                                 coakka_swift_stream_lane_t *lane);
+int32_t coakka_swift_stream_start(coakka_swift_runtime_library_t *library,
+                                  coakka_swift_stream_lane_t *lane);
+int32_t coakka_swift_stream_stop(coakka_swift_runtime_library_t *library,
+                                 coakka_swift_stream_lane_t *lane);
+int32_t coakka_swift_stream_bound_port(coakka_swift_runtime_library_t *library,
+                                       coakka_swift_stream_lane_t *lane,
+                                       uint16_t *out_port);
+int32_t coakka_swift_stream_prepare_publish(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, const char *token, uint64_t format_id,
+    uint32_t max_frame_bytes, coakka_swift_stream_source_fn source,
+    void *context);
+int32_t coakka_swift_stream_subscribe(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, const char *token, const char *host, uint16_t port,
+    uint64_t format_id, uint32_t max_frame_bytes, uint32_t window_bytes,
+    uint32_t timeout_ms, coakka_swift_stream_consumer_fn consumer,
+    void *context);
+int32_t coakka_swift_stream_get_session(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, uint32_t direction,
+    coakka_swift_stream_session_snapshot_t *out_snapshot);
+int32_t coakka_swift_stream_wait_session(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, uint32_t direction, uint64_t after_sequence,
+    uint32_t timeout_ms, coakka_swift_stream_session_snapshot_t *out_snapshot);
+int32_t coakka_swift_stream_get_pressure(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, uint32_t direction,
+    coakka_swift_stream_pressure_snapshot_t *out_snapshot);
+int32_t coakka_swift_stream_wait_pressure(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, uint32_t direction, uint64_t after_sequence,
+    uint32_t timeout_ms, coakka_swift_stream_pressure_snapshot_t *out_snapshot);
+int32_t coakka_swift_stream_cancel(coakka_swift_runtime_library_t *library,
+                                   coakka_swift_stream_lane_t *lane,
+                                   const char *session_id, uint32_t direction);
+int32_t coakka_swift_stream_forget(coakka_swift_runtime_library_t *library,
+                                   coakka_swift_stream_lane_t *lane,
+                                   const char *session_id, uint32_t direction);
+int32_t coakka_swift_stream_stats(coakka_swift_runtime_library_t *library,
+                                  coakka_swift_stream_lane_t *lane,
+                                  coakka_swift_stream_stats_t *out_stats);
 
 #ifdef __cplusplus
 }

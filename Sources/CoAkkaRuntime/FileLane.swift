@@ -43,7 +43,9 @@ public struct FileLaneSecurityConfig: Sendable {
   public var privateKeyFile = ""
   public init() {}
 }
-/// Bounded lane configuration. Zero tuning fields select native defaults.
+/// Bounded lane configuration. Zero tuning fields select core-runtime defaults.
+/// Size fields are bytes, time fields are milliseconds, and `bindPort == 0`
+/// requests an ephemeral receiver port.
 public struct FileLaneConfig: Sendable {
   public var flags: FileLaneFlags = [.sender, .receiver]
   public var bindHost = "127.0.0.1"
@@ -106,6 +108,8 @@ public struct FileDigest: Equatable, Sendable {
   public let size: UInt64
 }
 /// Immutable progress view with process-local monotonic timestamps.
+/// `progressMilli` ranges from 0 to 100000 (100.000%) and `updateSequence`
+/// advances whenever retained state changes.
 public struct FileTransferSnapshot: Sendable {
   public let direction: FileTransferDirection
   public let state: FileTransferState
@@ -132,13 +136,15 @@ public struct FileLaneStats: Sendable {
     failedReceives, canceledTransfers, completedSendBytes, completedReceiveBytes: UInt64
 }
 
-/// An independent native bulk-transfer lane.
+/// An independent bulk-transfer lane backed by the CoAkka core-runtime.
 ///
 /// Prepare the receiver before submitting the sender. Continue `waitTransfer`
 /// from each update sequence until both peers report success, then forget
 /// retained records. `close()` stops the lane, wakes waits, and drains calls.
 /// File bytes do not belong in runtime `Envelope` payloads.
 public final class FileLane: @unchecked Sendable {
+  // SAFETY: every mutable lifecycle field is serialized by `condition`; the
+  // immutable library handle outlives all calls and close drains `activeCalls`.
   private let library: NativeRuntimeLibrary
   private let condition = NSCondition()
   private var lane: OpaquePointer?
@@ -148,7 +154,10 @@ public final class FileLane: @unchecked Sendable {
     self.library = library
     self.lane = lane
   }
-  /// Opens and starts a lane, failing when the native ABI is unavailable.
+  /// Opens and starts a lane, failing when file transfer is unavailable.
+  /// - Parameters:
+  ///   - config: Bounded capabilities, workers, progress, and security settings.
+  ///   - runtimeLibPath: Explicit core-runtime path, or `nil` for connector resolution.
   public static func open(
     _ config: FileLaneConfig = FileLaneConfig(), runtimeLibPath: String? = nil
   ) throws -> FileLane {
@@ -208,7 +217,10 @@ public final class FileLane: @unchecked Sendable {
     }
     return FileLane(library: library, lane: out)
   }
-  /// Computes the exact source identity using the native implementation.
+  /// Computes the exact source identity through the selected core-runtime.
+  /// - Parameters:
+  ///   - path: Readable regular file to hash.
+  ///   - runtimeLibPath: Explicit core-runtime path, or `nil` for connector resolution.
   public static func sha256(path: String, runtimeLibPath: String? = nil) throws -> FileDigest {
     let library = try NativeRuntimeLibrary(path: runtimeNativePath(explicitPath: runtimeLibPath))
     let handle = try library.requireHandle()
@@ -234,45 +246,55 @@ public final class FileLane: @unchecked Sendable {
     }
   }
   /// Authorizes one destination and expected content identity.
-  public func prepareReceive(_ s: FileReceiveSpec) throws {
-    guard s.expectedSHA256.count == 32 else {
+  /// - Parameter spec: Local destination, one-use grant, exact byte size, and SHA-256.
+  public func prepareReceive(_ spec: FileReceiveSpec) throws {
+    guard spec.expectedSHA256.count == 32 else {
       throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
     }
     try withLane { h, l in
-      let c = CStringOwner([s.transferID, s.authorizationToken, s.destinationPath])
-      try s.expectedSHA256.withUnsafeBytes { b in
+      let c = CStringOwner([spec.transferID, spec.authorizationToken, spec.destinationPath])
+      try spec.expectedSHA256.withUnsafeBytes { b in
         try throwIfNativeError(
           coakka_swift_file_lane_prepare_receive(
-            h, l, c[0], c[1], c[2], s.expectedSize, b.bindMemory(to: UInt8.self).baseAddress),
+            h, l, c[0], c[1], c[2], spec.expectedSize,
+            b.bindMemory(to: UInt8.self).baseAddress),
           operation: "file_lane_prepare_receive")
       }
     }
   }
   /// Queues a send after the remote application prepares the receive.
-  public func submitSend(_ s: FileSendSpec) throws {
-    guard s.expectedSHA256.count == 32, s.remotePort > 0 else {
+  /// - Parameter spec: Source plus the endpoint and grant returned by the receiver.
+  public func submitSend(_ spec: FileSendSpec) throws {
+    guard spec.expectedSHA256.count == 32, spec.remotePort > 0 else {
       throw RuntimeError.invalidArgument("invalid send spec")
     }
     try withLane { h, l in
-      let c = CStringOwner([s.transferID, s.authorizationToken, s.remoteHost, s.sourcePath])
-      try s.expectedSHA256.withUnsafeBytes { b in
+      let c = CStringOwner([
+        spec.transferID, spec.authorizationToken, spec.remoteHost, spec.sourcePath,
+      ])
+      try spec.expectedSHA256.withUnsafeBytes { b in
         try throwIfNativeError(
           coakka_swift_file_lane_submit_send(
-            h, l, c[0], c[1], c[2], s.remotePort, c[3], s.expectedSize,
-            b.bindMemory(to: UInt8.self).baseAddress, s.timeoutMs),
+            h, l, c[0], c[1], c[2], spec.remotePort, c[3], spec.expectedSize,
+            b.bindMemory(to: UInt8.self).baseAddress, spec.timeoutMs),
           operation: "file_lane_submit_send")
       }
     }
   }
   /// Returns the current copied snapshot without waiting.
-  public func transfer(_ id: String, direction: FileTransferDirection) throws
+  /// - Parameters:
+  ///   - transferID: Application correlation ID used by both peers.
+  ///   - direction: Sender or receiver record to observe.
+  public func transfer(_ transferID: String, direction: FileTransferDirection) throws
     -> FileTransferSnapshot
-  { try read(id, direction, 0, 0, false) }
+  { try read(transferID, direction, 0, 0, false) }
   /// Blocks until the sequence advances, the timeout expires, or the lane stops.
   public func waitTransfer(
-    _ id: String, direction: FileTransferDirection, afterSequence: UInt64 = 0,
+    _ transferID: String, direction: FileTransferDirection, afterSequence: UInt64 = 0,
     timeoutMs: UInt32 = 30_000
-  ) throws -> FileTransferSnapshot { try read(id, direction, afterSequence, timeoutMs, true) }
+  ) throws -> FileTransferSnapshot {
+    try read(transferID, direction, afterSequence, timeoutMs, true)
+  }
   private func read(
     _ id: String, _ d: FileTransferDirection, _ seq: UInt64, _ ms: UInt32, _ wait: Bool
   ) throws -> FileTransferSnapshot {
@@ -301,12 +323,12 @@ public final class FileLane: @unchecked Sendable {
     }
   }
   /// Requests cooperative cancellation; observe terminal state before forget.
-  public func cancel(_ id: String, direction: FileTransferDirection) throws {
-    try control(id, direction, false)
+  public func cancel(_ transferID: String, direction: FileTransferDirection) throws {
+    try control(transferID, direction, false)
   }
   /// Releases one retained terminal record after recording its outcome.
-  public func forget(_ id: String, direction: FileTransferDirection) throws {
-    try control(id, direction, true)
+  public func forget(_ transferID: String, direction: FileTransferDirection) throws {
+    try control(transferID, direction, true)
   }
   private func control(_ id: String, _ d: FileTransferDirection, _ forget: Bool) throws {
     try withLane { h, l in

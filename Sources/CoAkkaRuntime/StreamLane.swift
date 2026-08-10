@@ -96,7 +96,8 @@ public struct StreamLaneSecurityConfig: Sendable {
 }
 
 /// Bounded workers, frames, flow control, and pressure timing.
-/// Zero tuning values select conservative native defaults.
+/// Size fields are bytes, time fields are milliseconds, and zero tuning values
+/// select conservative core-runtime defaults.
 public struct StreamLaneConfig: Sendable {
   public var flags: StreamLaneFlags = [.publisher, .subscriber]
   public var bindHost = "127.0.0.1"
@@ -167,6 +168,8 @@ public struct StreamSubscribeSpec {
 }
 
 /// Copied session progress with process-local monotonic timestamps.
+/// Frame and byte counters are cumulative for this side; `updateSequence`
+/// advances whenever retained state changes.
 public struct StreamSessionSnapshot: Sendable {
   public let direction: StreamDirection, state: StreamState, result: StreamResult
   public let formatID, frames, bytes, droppedFrames, lastSequence: UInt64
@@ -179,6 +182,7 @@ public struct StreamSessionSnapshot: Sendable {
 }
 
 /// Copied, policy-neutral transport-pressure observation.
+/// Durations and timestamps are nanoseconds; `observedDeliveryBps` is bytes per second.
 public struct StreamPressureSnapshot: Sendable {
   public let direction: StreamDirection, state: StreamPressureState
   public let reasons: StreamPressureReasons
@@ -242,6 +246,8 @@ private struct StreamCallbackKey: Hashable {
 
 /// Independent native streaming lane with synchronized callback and close ownership.
 public final class StreamLane: @unchecked Sendable {
+  // SAFETY: `condition` serializes lane state and callback ownership; close
+  // stops callbacks and drains `activeCalls` before releasing retained holders.
   private let library: NativeRuntimeLibrary
   private let condition = NSCondition()
   private var lane: OpaquePointer?
@@ -256,7 +262,7 @@ public final class StreamLane: @unchecked Sendable {
   /// Opens and starts a lane.
   /// - Parameters:
   ///   - config: Bounded capabilities, workers, security, flow-control, and pressure settings.
-  ///   - runtimeLibPath: Explicit native runtime path, or `nil` to use package resolution.
+  ///   - runtimeLibPath: Explicit core-runtime path, or `nil` to use package resolution.
   public static func open(
     _ config: StreamLaneConfig = StreamLaneConfig(),
     runtimeLibPath: String? = nil
@@ -395,15 +401,17 @@ public final class StreamLane: @unchecked Sendable {
   }
 
   /// Returns the current copied session snapshot without waiting.
-  public func session(_ id: String, direction: StreamDirection) throws -> StreamSessionSnapshot {
-    try readSession(id, direction, 0, 0, false)
+  public func session(_ sessionID: String, direction: StreamDirection) throws
+    -> StreamSessionSnapshot
+  {
+    try readSession(sessionID, direction, 0, 0, false)
   }
   /// Waits for a session update newer than `afterSequence` or for `timeoutMs`.
   public func waitSession(
-    _ id: String, direction: StreamDirection, afterSequence: UInt64 = 0,
+    _ sessionID: String, direction: StreamDirection, afterSequence: UInt64 = 0,
     timeoutMs: UInt32 = 30_000
   ) throws -> StreamSessionSnapshot {
-    try readSession(id, direction, afterSequence, timeoutMs, true)
+    try readSession(sessionID, direction, afterSequence, timeoutMs, true)
   }
   private func readSession(
     _ id: String, _ direction: StreamDirection, _ sequence: UInt64,
@@ -432,15 +440,17 @@ public final class StreamLane: @unchecked Sendable {
   }
 
   /// Returns the current policy-neutral pressure snapshot without waiting.
-  public func pressure(_ id: String, direction: StreamDirection) throws -> StreamPressureSnapshot {
-    try readPressure(id, direction, 0, 0, false)
+  public func pressure(_ sessionID: String, direction: StreamDirection) throws
+    -> StreamPressureSnapshot
+  {
+    try readPressure(sessionID, direction, 0, 0, false)
   }
   /// Waits for pressure newer than `afterSequence` or for `timeoutMs`.
   public func waitPressure(
-    _ id: String, direction: StreamDirection, afterSequence: UInt64 = 0,
+    _ sessionID: String, direction: StreamDirection, afterSequence: UInt64 = 0,
     timeoutMs: UInt32 = 30_000
   ) throws -> StreamPressureSnapshot {
-    try readPressure(id, direction, afterSequence, timeoutMs, true)
+    try readPressure(sessionID, direction, afterSequence, timeoutMs, true)
   }
   private func readPressure(
     _ id: String, _ direction: StreamDirection, _ sequence: UInt64,

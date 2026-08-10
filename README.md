@@ -15,8 +15,8 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `2.1.1`<br>
-Bundled runtime: `2.1.0+60ddf70d`; publisher signing: absent.
+Current source version: `2.3.0`<br>
+Bundled runtime: `2.3.0+a83ab412`; publisher signing: absent.
 
 ## Ecosystem
 
@@ -142,14 +142,18 @@ are described in [NATIVE-LICENSE.md](NATIVE-LICENSE.md).
 
 `FileLane.open(...)` exposes the independent native bulk-transfer lane through
 the C bridge. Native waits are blocking. See the shared
-[file-lane contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-file-transfer.md)
-for ownership and release requirements.
+[file-lane contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-file-transfer.md) for ownership and release requirements.
 
-## Continue Integrating
+## AI-Assisted Integration
 
-Use the runnable Swift sample and
-[AI-Assisted Integration](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md)
-before generating connection strategy, TLS/mTLS, File Lane, or Stream Lane
-code. SwiftPM `2.1.1` includes File Lane. Stream Lane remains an exact-source
-integration until a matching public tag is promoted; do not attach its imports
-to SwiftPM `2.1.1`.
+Before generating application code, use the selected connector README together
+with the public [AI-assisted integration guide](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md).
+It requires an exact package coordinate, platform evidence, the runnable
+language sample, and the feature-specific lifecycle contract. Do not translate
+API identifiers from another language by analogy.
+
+## Stream Lane
+
+Version `2.3.0` contains the Stream Lane connector surface over exact native
+generation `2.3.0+a83ab412`. Keep that pairing intact and follow the public
+[streaming contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-streaming.md).

@@ -1,12 +1,11 @@
 # Swift Connector Release Notes
 
-## 2.1.1
+## 2.3.0
 
-- Kept native generation `2.1.0+60ddf70d` unchanged.
-- Replaced the private connector-repository link with the canonical public
-  file-lane contract.
-- Added package-readiness checks that require the public contract and reject
-  private repository references in the exported README.
+- Added Stream Lane with C-bridge callback ownership, copied public
+  projections, credit and pressure snapshots, and condition-serialized close.
+- Embedded exact native generation `2.3.0+a83ab412` for all five supported
+  platforms.
 
 ## 2.1.0
 

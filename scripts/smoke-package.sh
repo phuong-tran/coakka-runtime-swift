@@ -12,6 +12,22 @@ command -v openssl >/dev/null 2>&1 || {
   exit 1
 }
 
+case "$(uname -s):$(uname -m)" in
+  Darwin:arm64)
+    feature_runtime="${swift_root}/Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib"
+    ;;
+  Linux:aarch64 | Linux:arm64)
+    feature_runtime="${swift_root}/Sources/CoAkkaRuntime/Resources/linux-aarch64/libcoakka_runtime_v2.so"
+    ;;
+  Linux:x86_64 | Linux:amd64)
+    feature_runtime="${swift_root}/Sources/CoAkkaRuntime/Resources/linux-x86_64/libcoakka_runtime_v2.so"
+    ;;
+  *)
+    echo "[swift-runtime-smoke] unsupported feature-smoke host: $(uname -s):$(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 \
   -subj /CN=CoAkka-Test-CA -days 2 \
   -keyout "${fixture_root}/ca.key" -out "${fixture_root}/ca.pem" >/dev/null 2>&1
@@ -36,6 +52,10 @@ swift --version
 (
   cd "${swift_root}"
   swift test
+  COAKKA_FILE_LANE_RUNTIME_LIB="${feature_runtime}" \
+    swift test --filter CoAkkaRuntimeTests/testFileLaneRoundtripCrossesNativeQuantum
+  COAKKA_STREAM_LANE_RUNTIME_LIB="${feature_runtime}" \
+    swift test --filter StreamLaneTests/testNativeRoundTripAcrossCallbacks
   swift run CoAkkaRuntimeSmoke
   COAKKA_TLS_FIXTURE_ROOT="${fixture_root}" swift run CoAkkaRuntimeTransportSmoke
 )

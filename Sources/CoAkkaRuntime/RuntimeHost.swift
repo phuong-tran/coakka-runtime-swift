@@ -90,6 +90,7 @@ public final class RuntimeHost: @unchecked Sendable {
             var startupSecurityResult: TcpSecurityApplyResult?
 
             do {
+                try applyNetwork(library: library, runtime: runtime, network: normalized.network)
                 if let connectionStrategy = normalized.connectionStrategy {
                     let result = try applyConnection(
                         library: library,
@@ -572,6 +573,32 @@ public final class RuntimeHost: @unchecked Sendable {
             throw RuntimeError.closed
         }
     }
+}
+
+private func applyNetwork(
+    library: NativeRuntimeLibrary,
+    runtime: OpaquePointer,
+    network: RuntimeNetworkConfig
+) throws {
+    let handle = try library.requireHandle()
+    let bindHost = network.bindHost.map(duplicateCString)
+    let advertiseHost = network.advertiseHost.map(duplicateCString)
+    defer {
+        bindHost?.deallocate()
+        advertiseHost?.deallocate()
+    }
+    try throwIfNativeError(
+        coakka_swift_runtime_apply_network(
+            handle,
+            runtime,
+            network.mode.rawValue,
+            bindHost.map { UnsafePointer($0) },
+            network.bindPort,
+            advertiseHost.map { UnsafePointer($0) },
+            network.advertisePort
+        ),
+        operation: "apply runtime network policy"
+    )
 }
 
 private func applyRoutes(

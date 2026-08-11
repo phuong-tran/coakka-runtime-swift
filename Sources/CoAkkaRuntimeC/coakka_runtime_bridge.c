@@ -27,6 +27,21 @@ typedef struct native_runtime_config_t {
     int queue_capacity;
 } native_runtime_config_t;
 
+typedef struct native_network_options_t {
+    size_t struct_size;
+    uint64_t fields;
+    uint32_t mode;
+    uint32_t reserved;
+    const char *bind_host;
+    const char *advertise_host;
+    uint16_t bind_port;
+    uint16_t advertise_port;
+    uint32_t reserved2;
+} native_network_options_t;
+
+_Static_assert(sizeof(native_network_options_t) == 48,
+               "runtime network options ABI drift");
+
 typedef struct native_runtime_info_t {
     size_t struct_size;
     uint32_t abi_version;
@@ -90,6 +105,7 @@ typedef uint32_t (*get_abi_version_fn)(void);
 typedef int32_t (*get_info_fn)(native_runtime_info_t *);
 typedef native_runtime_t *(*runtime_create_fn)(const native_runtime_config_t *);
 typedef void (*runtime_destroy_fn)(native_runtime_t *);
+typedef int32_t (*apply_network_options_fn)(native_runtime_t *, const native_network_options_t *);
 typedef int32_t (*get_host_handles_fn)(native_runtime_t *, coakka_swift_host_handles_t *);
 typedef int32_t (*runtime_start_fn)(native_runtime_t *);
 typedef int32_t (*runtime_stop_fn)(native_runtime_t *);
@@ -132,6 +148,7 @@ typedef struct runtime_library_t {
     get_info_fn get_info;
     runtime_create_fn runtime_create;
     runtime_destroy_fn runtime_destroy;
+    apply_network_options_fn apply_network_options;
     get_host_handles_fn get_host_handles;
     runtime_start_fn runtime_start;
     runtime_stop_fn runtime_stop;
@@ -275,6 +292,9 @@ int32_t coakka_swift_runtime_library_open(const char *path,
     LOAD_SYMBOL(get_info, get_info_fn, "coakka_v2_runtime_get_info");
     LOAD_SYMBOL(runtime_create, runtime_create_fn, "coakka_v2_runtime_create");
     LOAD_SYMBOL(runtime_destroy, runtime_destroy_fn, "coakka_v2_runtime_destroy");
+    LOAD_SYMBOL(apply_network_options,
+                apply_network_options_fn,
+                "coakka_v2_runtime_apply_network_options");
     LOAD_SYMBOL(get_host_handles, get_host_handles_fn, "coakka_v2_runtime_get_host_handles");
     LOAD_SYMBOL(runtime_start, runtime_start_fn, "coakka_v2_runtime_start");
     LOAD_SYMBOL(runtime_stop, runtime_stop_fn, "coakka_v2_runtime_stop");
@@ -678,6 +698,29 @@ void coakka_swift_runtime_destroy(coakka_swift_runtime_library_t *library,
         return;
     }
     lib->runtime_destroy((native_runtime_t *)runtime);
+}
+
+int32_t coakka_swift_runtime_apply_network(coakka_swift_runtime_library_t *library,
+                                           coakka_swift_runtime_t *runtime,
+                                           uint32_t mode,
+                                           const char *bind_host,
+                                           uint16_t bind_port,
+                                           const char *advertise_host,
+                                           uint16_t advertise_port) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || runtime == NULL) {
+        return COAKKA_SWIFT_STATUS_INVALID_ARG;
+    }
+    native_network_options_t options;
+    memset(&options, 0, sizeof(options));
+    options.struct_size = sizeof(options);
+    options.fields = mode == COAKKA_SWIFT_NETWORK_NODE ? UINT64_C(0x1f) : UINT64_C(0x01);
+    options.mode = mode;
+    options.bind_host = bind_host;
+    options.advertise_host = advertise_host;
+    options.bind_port = bind_port;
+    options.advertise_port = advertise_port;
+    return lib->apply_network_options((native_runtime_t *)runtime, &options);
 }
 
 int32_t coakka_swift_runtime_get_host_handles(coakka_swift_runtime_library_t *library,

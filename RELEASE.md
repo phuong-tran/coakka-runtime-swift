@@ -1,7 +1,7 @@
 # Releasing The Swift Connector
 
-Current source version is `2.3.0`, paired with native
-generation `2.3.0+a83ab412`; publisher signing is absent.
+Current source version is `2.4.0`, paired with native
+generation `2.4.0+c2f53117`; publisher signing is absent.
 
 ## Package Verification
 

@@ -89,6 +89,12 @@ enum {
 };
 
 enum {
+    COAKKA_SWIFT_NETWORK_EMBEDDED = 1,
+    COAKKA_SWIFT_NETWORK_OUTBOUND_ONLY = 2,
+    COAKKA_SWIFT_NETWORK_NODE = 3
+};
+
+enum {
     COAKKA_SWIFT_ROUTE_SINGLE_OWNER = 1
 };
 
@@ -553,6 +559,15 @@ coakka_swift_runtime_t *coakka_swift_runtime_create(coakka_swift_runtime_library
  */
 void coakka_swift_runtime_destroy(coakka_swift_runtime_library_t *library,
                                   coakka_swift_runtime_t *runtime);
+
+/** Applies an explicit startup-only listener participation policy. */
+int32_t coakka_swift_runtime_apply_network(coakka_swift_runtime_library_t *library,
+                                           coakka_swift_runtime_t *runtime,
+                                           uint32_t mode,
+                                           const char *bind_host,
+                                           uint16_t bind_port,
+                                           const char *advertise_host,
+                                           uint16_t advertise_port);
 
 /**
  * Exports host-owned descriptor lanes exactly once while runtime is CREATED.

@@ -30,11 +30,11 @@ sha256_file() {
 
 expected_digest() {
   case "$1" in
-    macos-aarch64) printf '%s\n' "ce141677ebd913537dce13805ce184d71a543a1b4cfd56a24df36c51378acb8b" ;;
-    linux-aarch64) printf '%s\n' "7e450b4a76ca612cf181083443d35f8c50b851d294973eb1ed34fd7868876b5e" ;;
-    linux-x86_64) printf '%s\n' "2a0750f96410a035d27b9b83cfdcca574afc3c8d071af837bbf7db73e8b446a3" ;;
-    windows-aarch64) printf '%s\n' "fd2cd782acaabb70467df6c34d7f812d87415c7dee9a9898a1c335a6a16ebe97" ;;
-    windows-x86_64) printf '%s\n' "1f4019b285ddbd2745b52fac223dc1b7526c86a1e6e0a2a4b9a50fbf5b256403" ;;
+    macos-aarch64) printf '%s\n' "5ca37b5f6d5182d4bd25284785c6b386114857074c91ab9dbefecf0dedda637c" ;;
+    linux-aarch64) printf '%s\n' "9ccd618dbb18fb32a0d7201f13a3163de175c7037c3e5325e84824bb32e1843c" ;;
+    linux-x86_64) printf '%s\n' "465e831fa564cde87fe3af29390071e4241390e1edcd0153c55ce00017f2c248" ;;
+    windows-aarch64) printf '%s\n' "ae26021aac51ae19d06e317b9ce5a43befa9ef1bc8997e6bbd238e09036df3f9" ;;
+    windows-x86_64) printf '%s\n' "795615adb861b74d9c017d480a377a08cd355e1fb83648f06b43ee85c5f049d6" ;;
     *) echo "[swift-stage-runtime] unknown platform: $1" >&2; exit 1 ;;
   esac
 }

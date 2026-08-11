@@ -17,14 +17,84 @@ public struct RuntimeRouteSpec: Sendable {
     public var host: String
     public var port: UInt16
 
-    public init(target: String, host: String = "127.0.0.1", port: UInt16 = 19191) {
+    public init(target: String, host: String = "127.0.0.1", port: UInt16 = 0) {
         self.target = target
         self.host = host
         self.port = port
     }
 
-    public static func local(_ target: String, port: UInt16 = 19191, host: String = "127.0.0.1") -> RuntimeRouteSpec {
+    public static func local(_ target: String, port: UInt16 = 0, host: String = "127.0.0.1") -> RuntimeRouteSpec {
         RuntimeRouteSpec(target: target, host: host, port: port)
+    }
+}
+
+public enum RuntimeNetworkMode: UInt32, Sendable {
+    case embedded = 1
+    case outboundOnly = 2
+    case networkNode = 3
+}
+
+public struct RuntimeNetworkConfig: Sendable {
+    public var mode: RuntimeNetworkMode
+    public var bindHost: String?
+    public var bindPort: UInt16
+    public var advertiseHost: String?
+    public var advertisePort: UInt16
+
+    public static func embedded() -> RuntimeNetworkConfig {
+        RuntimeNetworkConfig(mode: .embedded)
+    }
+
+    public static func outboundOnly() -> RuntimeNetworkConfig {
+        RuntimeNetworkConfig(mode: .outboundOnly)
+    }
+
+    public static func networkNode(
+        bindHost: String,
+        bindPort: UInt16,
+        advertiseHost: String,
+        advertisePort: UInt16 = 0
+    ) -> RuntimeNetworkConfig {
+        RuntimeNetworkConfig(
+            mode: .networkNode,
+            bindHost: bindHost,
+            bindPort: bindPort,
+            advertiseHost: advertiseHost,
+            advertisePort: advertisePort == 0 ? bindPort : advertisePort
+        )
+    }
+
+    public init(
+        mode: RuntimeNetworkMode,
+        bindHost: String? = nil,
+        bindPort: UInt16 = 0,
+        advertiseHost: String? = nil,
+        advertisePort: UInt16 = 0
+    ) {
+        self.mode = mode
+        self.bindHost = bindHost
+        self.bindPort = bindPort
+        self.advertiseHost = advertiseHost
+        self.advertisePort = advertisePort
+    }
+
+    func validate() throws {
+        if mode == .networkNode {
+            guard let bindHost, !bindHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  bindPort > 0 else {
+                throw RuntimeError.invalidArgument("networkNode requires bindHost and bindPort")
+            }
+            guard let advertiseHost,
+                  !advertiseHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  advertisePort > 0 else {
+                throw RuntimeError.invalidArgument("networkNode requires advertiseHost and advertisePort")
+            }
+            guard !["0.0.0.0", "::", "[::]", "::0"].contains(advertiseHost) else {
+                throw RuntimeError.invalidArgument("advertiseHost must not be wildcard")
+            }
+        } else if bindHost != nil || bindPort != 0 || advertiseHost != nil || advertisePort != 0 {
+            throw RuntimeError.invalidArgument("embedded and outboundOnly do not accept a listener")
+        }
     }
 }
 
@@ -38,6 +108,7 @@ public struct ConnectorStartSpec: Sendable {
     public var separateDeliveredRequestLane: Bool
     public var connectionStrategy: TcpConnectionStrategySpec?
     public var security: TcpSecuritySpec?
+    public var network: RuntimeNetworkConfig
 
     public init(
         systemName: String,
@@ -48,7 +119,8 @@ public struct ConnectorStartSpec: Sendable {
         routes: [RuntimeRouteSpec],
         separateDeliveredRequestLane: Bool = true,
         connectionStrategy: TcpConnectionStrategySpec? = nil,
-        security: TcpSecuritySpec? = nil
+        security: TcpSecuritySpec? = nil,
+        network: RuntimeNetworkConfig = .embedded()
     ) {
         self.systemName = systemName
         self.nodeID = nodeID
@@ -59,6 +131,7 @@ public struct ConnectorStartSpec: Sendable {
         self.separateDeliveredRequestLane = separateDeliveredRequestLane
         self.connectionStrategy = connectionStrategy
         self.security = security
+        self.network = network
     }
 
     func validate() throws {
@@ -80,6 +153,7 @@ public struct ConnectorStartSpec: Sendable {
         guard generation > 0 else {
             throw RuntimeError.invalidArgument("generation must be greater than zero")
         }
+        try network.validate()
         guard !routes.isEmpty else {
             throw RuntimeError.invalidArgument("at least one local route is required")
         }
@@ -95,9 +169,6 @@ public struct ConnectorStartSpec: Sendable {
             }
             guard !route.host.utf8.contains(0) else {
                 throw RuntimeError.invalidArgument("route host must not contain NUL")
-            }
-            guard route.port > 0 else {
-                throw RuntimeError.invalidArgument("route port must be non-zero")
             }
         }
     }

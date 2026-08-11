@@ -1,5 +1,12 @@
 # Swift Connector Release Notes
 
+## 2.4.0
+
+- Added explicit embedded, outbound-only, and network-node startup modes.
+- Embedded and outbound-only runtimes do not listen and report local port `0`.
+- Embedded exact native generation `2.4.0+c2f53117` for all five supported
+  platforms.
+
 ## 2.3.0
 
 - Added Stream Lane with C-bridge callback ownership, copied public

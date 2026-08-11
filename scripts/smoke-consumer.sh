@@ -43,7 +43,7 @@ let runtime = try RuntimeHost.start(
         systemName: "swift-consumer-smoke",
         nodeID: "swift-consumer-smoke-node",
         queueCapacity: 64,
-        routes: [.local("svc.echo", port: 19193)],
+        routes: [.local("svc.echo")],
         connectionStrategy: TcpConnectionStrategySpec(mode: mode),
         security: TcpSecuritySpec()
     )

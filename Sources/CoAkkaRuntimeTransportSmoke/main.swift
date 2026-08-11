@@ -16,7 +16,7 @@ func startSpec(
         systemName: "connector-swift-transport-smoke",
         nodeID: "node-\(suffix)",
         queueCapacity: 32,
-        routes: [.local("svc.echo", port: 19_560)],
+        routes: [.local("svc.echo")],
         connectionStrategy: connection,
         security: security
     )

@@ -28,6 +28,10 @@ case "$(uname -s):$(uname -m)" in
     ;;
 esac
 
+if [[ -n "${COAKKA_RUNTIME_LIB:-}" ]]; then
+  feature_runtime="${COAKKA_RUNTIME_LIB}"
+fi
+
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 \
   -subj /CN=CoAkka-Test-CA -days 2 \
   -keyout "${fixture_root}/ca.key" -out "${fixture_root}/ca.pem" >/dev/null 2>&1

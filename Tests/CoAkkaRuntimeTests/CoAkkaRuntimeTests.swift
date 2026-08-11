@@ -46,6 +46,30 @@ final class CoAkkaRuntimeTests: XCTestCase {
         }
     }
 
+    func testNetworkPolicyDefaultsEmbeddedAndRejectsWildcardAdvertise() {
+        let local = RuntimeRouteSpec.local("svc.echo")
+        XCTAssertEqual(local.port, 0)
+        XCTAssertThrowsError(
+            try RuntimeHost.start(
+                ConnectorStartSpec(
+                    systemName: "swift-invalid-network",
+                    nodeID: "swift-invalid-network-node",
+                    routes: [local],
+                    network: .networkNode(
+                        bindHost: "0.0.0.0",
+                        bindPort: 19301,
+                        advertiseHost: "0.0.0.0"
+                    )
+                )
+            )
+        ) { error in
+            guard case RuntimeError.invalidArgument(let message) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertEqual(message, "advertiseHost must not be wildcard")
+        }
+    }
+
     func testRuntimeSmoke() throws {
         let runtime = try RuntimeHost.start(
             ConnectorStartSpec(

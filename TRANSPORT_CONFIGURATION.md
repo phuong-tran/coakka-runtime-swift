@@ -82,8 +82,9 @@ context. Embedded NUL is rejected locally. A bad key, stale generation, mode
 change, or validation failure returns the still-active prior generation.
 
 See the canonical [TLS/mTLS guide](https://github.com/phuong-tran/coakka-publish/blob/main/docs/tls-and-mtls.md)
-for Kubernetes ingress/service mesh, controlled networks, LAN/edge, Raspberry
-Pi, BeagleBone, bare metal, industrial Android, and rotation guidance.
+for direct runtime TLS/mTLS without a service-mesh data plane, Kubernetes,
+controlled networks, LAN/edge, Raspberry Pi, BeagleBone, bare metal,
+industrial Android, and rotation guidance.
 
 ## Platforms And Signing
 

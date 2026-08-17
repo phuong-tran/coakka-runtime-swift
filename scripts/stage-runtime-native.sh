@@ -30,7 +30,7 @@ sha256_file() {
 
 expected_digest() {
   case "$1" in
-    macos-aarch64) printf '%s\n' "5ca37b5f6d5182d4bd25284785c6b386114857074c91ab9dbefecf0dedda637c" ;;
+    macos-aarch64) printf '%s\n' "956f6cf04c18a923cc6416366b1a1ee1e5cae67e6f61bf3988e6bbeb09db6a7c" ;;
     linux-aarch64) printf '%s\n' "9ccd618dbb18fb32a0d7201f13a3163de175c7037c3e5325e84824bb32e1843c" ;;
     linux-x86_64) printf '%s\n' "465e831fa564cde87fe3af29390071e4241390e1edcd0153c55ce00017f2c248" ;;
     windows-aarch64) printf '%s\n' "ae26021aac51ae19d06e317b9ce5a43befa9ef1bc8997e6bbd238e09036df3f9" ;;

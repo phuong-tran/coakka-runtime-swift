@@ -15,8 +15,12 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `2.4.0`<br>
+Current source version: `2.4.1`<br>
 Bundled runtime: `2.4.0+c2f53117`; publisher signing: absent.
+
+The bundled macOS ARM64 dylib is rebuilt from the exact `c2f53117` native
+snapshot with deployment target `13.0`. Package verification pins its digest
+and rejects a higher Mach-O minimum OS version.
 
 ## Ecosystem
 
@@ -154,6 +158,6 @@ API identifiers from another language by analogy.
 
 ## Stream Lane
 
-Version `2.4.0` contains the Stream Lane connector surface over exact native
+Version `2.4.1` contains the Stream Lane connector surface over exact native
 generation `2.4.0+c2f53117`. Keep that pairing intact and follow the public
 [streaming contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-streaming.md).

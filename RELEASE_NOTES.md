@@ -1,5 +1,14 @@
 # Swift Connector Release Notes
 
+## 2.4.1
+
+- Rebuilt the bundled macOS ARM64 runtime dylib from exact native snapshot
+  `c2f53117f991f67f809a0bf46bac2ce26091eb78` with deployment target `13.0`.
+- Pinned the corrected dylib SHA-256 and rejected higher Mach-O minimum OS
+  versions during package verification.
+- Kept Swift tools `6.0`, the Swift API, native ABI and generation
+  `2.4.0+c2f53117`, and the Linux and Windows payloads unchanged.
+
 ## 2.4.0
 
 - Added explicit embedded, outbound-only, and network-node startup modes.

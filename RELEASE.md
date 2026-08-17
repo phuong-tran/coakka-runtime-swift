@@ -1,7 +1,13 @@
 # Releasing The Swift Connector
 
-Current source version is `2.4.0`, paired with native
+Current source version is `2.4.1`, paired with native
 generation `2.4.0+c2f53117`; publisher signing is absent.
+
+The macOS ARM64 payload is rebuilt from exact native source snapshot
+`c2f53117f991f67f809a0bf46bac2ce26091eb78` with deployment target `13.0`.
+Its SHA-256 is
+`956f6cf04c18a923cc6416366b1a1ee1e5cae67e6f61bf3988e6bbeb09db6a7c`.
+The other four payloads remain byte-identical to `2.4.0`.
 
 ## Package Verification
 
@@ -19,6 +25,10 @@ The package contains the exact macOS ARM64 dylib, both Linux shared objects,
 and both Windows DLLs. All five digests are fixed in the
 verifier. Package presence and source compilation are not Linux/Windows Swift
 execution evidence.
+
+`xcrun vtool -show-build` must report macOS `minos 13.0` for the bundled
+dylib. Running the package on a newer macOS ARM64 host is not evidence that it
+was executed on macOS 13.
 
 The checks above build and consume a local SwiftPM archive. Package presence
 and bridge compilation are reported separately from native connector execution

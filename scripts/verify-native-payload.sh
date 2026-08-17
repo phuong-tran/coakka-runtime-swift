@@ -32,7 +32,7 @@ verify_native() {
 
 verify_native \
   "macos-aarch64/libcoakka_runtime_v2.dylib" \
-  "5ca37b5f6d5182d4bd25284785c6b386114857074c91ab9dbefecf0dedda637c" \
+  "956f6cf04c18a923cc6416366b1a1ee1e5cae67e6f61bf3988e6bbeb09db6a7c" \
   "Mach-O 64-bit dynamically linked shared library arm64"
 verify_native \
   "linux-aarch64/libcoakka_runtime_v2.so" \
@@ -51,6 +51,15 @@ verify_native \
   "795615adb861b74d9c017d480a377a08cd355e1fb83648f06b43ee85c5f049d6" \
   "PE32\\+ executable \\(DLL\\).*x86-64"
 
+macos_native="${resource_root}/macos-aarch64/libcoakka_runtime_v2.dylib"
+macos_build_version="$(xcrun vtool -show-build "${macos_native}")"
+macos_minos="$(printf '%s\n' "${macos_build_version}" | awk '$1 == "minos" { print $2 }')"
+if [[ "${macos_minos}" != "13.0" ]]; then
+  echo "[swift-verify-runtime] expected macOS deployment target 13.0, got ${macos_minos:-missing}" >&2
+  printf '%s\n' "${macos_build_version}" >&2
+  exit 1
+fi
+
 entries="$(find "${resource_root}" -type f \( -name '*.so' -o -name '*.dylib' -o -name '*.dll' \) | sort)"
 count="$(printf '%s\n' "${entries}" | sed '/^$/d' | wc -l | tr -d ' ')"
 if [[ "${count}" != "5" ]]; then
@@ -59,4 +68,4 @@ if [[ "${count}" != "5" ]]; then
   exit 1
 fi
 
-echo "[swift-verify-runtime] exact unsigned native payload ok (macOS/Linux/Windows)"
+echo "[swift-verify-runtime] exact unsigned native payload ok (macOS 13/Linux/Windows)"

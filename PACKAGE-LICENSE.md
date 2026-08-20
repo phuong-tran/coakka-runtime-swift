@@ -1,7 +1,9 @@
 # CoAkka Package License Map
 
 This package is free to use in applications, including commercial and
-production applications. Its licenses apply by file scope.
+production applications. Its licenses apply by file scope; they apply
+simultaneously to their respective files and are not alternative licenses for
+the package as a whole.
 
 ## Connector Material: Apache-2.0
 

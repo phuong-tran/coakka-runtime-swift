@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-package_version="2.4.1"
+package_version="2.5.0"
 archive="${swift_root}/coakka-runtime-swift-${package_version}.tar.gz"
 work_root="$(mktemp -d "${TMPDIR:-/tmp}/coakka-swift-package.XXXXXX")"
 package_root="${work_root}/coakka-runtime-swift-${package_version}"
@@ -17,7 +17,10 @@ COPYFILE_DISABLE=1 tar -C "${work_root}" -czf "${archive}" "$(basename "${packag
 required=(
   Package.swift
   README.md
+  LICENSE
   NATIVE-LICENSE.md
+  PACKAGE-LICENSE.md
+  NOTICE
   RELEASE.md
   RELEASE_NOTES.md
   TRANSPORT_CONFIGURATION.md
@@ -47,6 +50,9 @@ grep -Fq "https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md
   "${package_root}/README.md"
 grep -Fq "https://raw.githubusercontent.com/phuong-tran/coakka-samples/main/docs/assets/brand/coakka-logo.png" \
   "${package_root}/README.md"
+grep -Fq "https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-file-transfer.md" "${package_root}/README.md"
+grep -Fq "https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-streaming.md" "${package_root}/README.md"
+grep -Fq "https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md" "${package_root}/README.md"
 
 (cd "${package_root}" && bash scripts/verify-native-payload.sh)
 python3 - "${package_root}/coakka-runtime-package.json" <<'PY'
@@ -56,8 +62,8 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     metadata = json.load(stream)
 
-assert metadata["artifact_version"] == "2.4.1"
-assert metadata["bundled_native_package_version"] == "2.4.0+c2f53117"
+assert metadata["artifact_version"] == "2.5.0"
+assert metadata["bundled_native_package_version"] == "2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a"
 assert metadata["publisher_signing"] == "absent"
 assert metadata["supported_platforms"] == [
     "macos-aarch64",

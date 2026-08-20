@@ -15,10 +15,10 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `2.4.1`<br>
-Bundled runtime: `2.4.0+c2f53117`; publisher signing: absent.
+Current source version: `2.5.0`<br>
+Bundled runtime: `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`; publisher signing: absent.
 
-The bundled macOS ARM64 dylib is rebuilt from the exact `c2f53117` native
+The bundled macOS ARM64 dylib is rebuilt from the exact `4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a` native
 snapshot with deployment target `13.0`. Package verification pins its digest
 and rejects a higher Mach-O minimum OS version.
 
@@ -33,10 +33,10 @@ target runtime executed.
 Kubernetes is supported but not required. The same runtime contract applies to
 standalone hosts, containers, VMs, bare metal, and architecture-matched edge
 deployments. Use the public
-[Ecosystem Overview](https://github.com/phuong-tran/coakka-publish/blob/main/docs/ecosystem-overview.md)
+[Ecosystem Overview](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ecosystem-overview.md)
 and [Compatibility Matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md)
 for exact package and native-platform evidence.
-The [package and platform evidence ledger](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-package-platform-evidence.md)
+The [package and platform evidence ledger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-package-platform-evidence.md)
 separates payload presence, verification, matching-host execution, and known
 release limitations.
 Start with the [CoAkka Documentation](https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md)
@@ -132,21 +132,31 @@ ticket use, and frame-reader use from racing.
 
 ## Documentation And Support
 
-- [Connection strategies](https://github.com/phuong-tran/coakka-publish/blob/main/docs/connection-strategies.md)
-- [TLS/mTLS](https://github.com/phuong-tran/coakka-publish/blob/main/docs/tls-and-mtls.md)
-- [Common troubleshooting](https://github.com/phuong-tran/coakka-publish/blob/main/docs/troubleshooting.md), including unsigned macOS/Windows artifacts and Linux loader checks
-- [Contact and support](https://github.com/phuong-tran/coakka-publish/blob/main/docs/contact-and-support.md)
+- [Connection strategies](https://github.com/phuong-tran/coakka-samples/blob/main/docs/connection-strategies.md)
+- [TLS/mTLS](https://github.com/phuong-tran/coakka-samples/blob/main/docs/tls-and-mtls.md)
+- [Common troubleshooting](https://github.com/phuong-tran/coakka-samples/blob/main/docs/troubleshooting.md), including unsigned macOS/Windows artifacts and Linux loader checks
+- [Contact and support](https://github.com/phuong-tran/coakka-samples/blob/main/docs/contact-and-support.md)
 - Issues: https://github.com/phuong-tran/coakka-publish/issues
 - Contact: `gabrielgun1983@gmail.com`
 
-The connector source license is in [LICENSE](LICENSE). Native artifact terms
-are described in [NATIVE-LICENSE.md](NATIVE-LICENSE.md).
+## License
+
+Connector material is Apache-2.0 under [LICENSE](LICENSE). Bundled native
+material uses the terms in [NATIVE-LICENSE.md](NATIVE-LICENSE.md). See
+[PACKAGE-LICENSE.md](PACKAGE-LICENSE.md) for the file-scope map and
+[NOTICE](NOTICE) for the package notice.
 
 ## File Lane
 
 `FileLane.open(...)` exposes the independent native bulk-transfer lane through
 the C bridge. Native waits are blocking. See the shared
-[file-lane contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-file-transfer.md) for ownership and release requirements.
+[file-lane contract](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-file-transfer.md) for ownership and release requirements.
+
+## Stream Lane
+
+Version `2.5.0` contains the Stream Lane connector surface over exact native
+generation `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`. Keep that pairing intact and follow the public
+[streaming contract](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-streaming.md).
 
 ## AI-Assisted Integration
 
@@ -155,9 +165,3 @@ with the public [AI-assisted integration guide](https://github.com/phuong-tran/c
 It requires an exact package coordinate, platform evidence, the runnable
 language sample, and the feature-specific lifecycle contract. Do not translate
 API identifiers from another language by analogy.
-
-## Stream Lane
-
-Version `2.4.1` contains the Stream Lane connector surface over exact native
-generation `2.4.0+c2f53117`. Keep that pairing intact and follow the public
-[streaming contract](https://github.com/phuong-tran/coakka-publish/blob/main/docs/runtime-streaming.md).

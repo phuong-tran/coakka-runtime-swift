@@ -1,0 +1,9 @@
+CoAkka Connectors
+Copyright 2026 Phuong Tran and contributors.
+
+Language-level connector material is licensed under the Apache License,
+Version 2.0. Bundled CoAkka native artifacts remain under the CoAkka Public
+Artifact License 1.1. See PACKAGE-LICENSE.md for the file-scope map, LICENSE
+for Apache-2.0, and NATIVE-LICENSE.md for the native artifact terms.
+
+Third-party components retain their respective copyright and license notices.

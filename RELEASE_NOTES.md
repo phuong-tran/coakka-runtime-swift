@@ -1,5 +1,14 @@
 # Swift Connector Release Notes
 
+## 2.5.0
+
+- Adds File Lane and Stream Lane to the Swift source package.
+- Embeds all five payloads from exact native generation
+  `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`.
+- Makes package licensing explicit by file scope: Swift connector material is
+  Apache-2.0 and bundled CoAkka native material remains under the CoAkka Public
+  Artifact License 1.1.
+
 ## 2.4.1
 
 - Rebuilt the bundled macOS ARM64 runtime dylib from exact native snapshot
@@ -52,6 +61,6 @@ on macOS ARM64. Linux ARM64 and Windows x86-64 package payloads are included;
 this package receipt makes no Swift connector execution claim for those targets.
 
 Publisher signing is absent and is explained in
-[common troubleshooting](https://github.com/phuong-tran/coakka-publish/blob/main/docs/troubleshooting.md).
+[common troubleshooting](https://github.com/phuong-tran/coakka-samples/blob/main/docs/troubleshooting.md).
 
 Contact: `gabrielgun1983@gmail.com` or the public issue tracker.

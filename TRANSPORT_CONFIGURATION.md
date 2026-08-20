@@ -59,7 +59,7 @@ numeric data. Startup rejection throws `RuntimeError.tcpConnectionApply` or
 - `.multiplexing`: bounded concurrent exchanges on retained connections.
 
 Defaults and edition/tuning availability are canonical in
-[Connection Strategies](https://github.com/phuong-tran/coakka-publish/blob/main/docs/connection-strategies.md).
+[Connection Strategies](https://github.com/phuong-tran/coakka-samples/blob/main/docs/connection-strategies.md).
 
 ## TLS Reload
 
@@ -81,16 +81,15 @@ loads and validates them synchronously, then publishes a private immutable
 context. Embedded NUL is rejected locally. A bad key, stale generation, mode
 change, or validation failure returns the still-active prior generation.
 
-See the canonical [TLS/mTLS guide](https://github.com/phuong-tran/coakka-publish/blob/main/docs/tls-and-mtls.md)
-for direct runtime TLS/mTLS without a service-mesh data plane, Kubernetes,
-controlled networks, LAN/edge, Raspberry Pi, BeagleBone, bare metal,
-industrial Android, and rotation guidance.
+See the canonical [TLS/mTLS guide](https://github.com/phuong-tran/coakka-samples/blob/main/docs/tls-and-mtls.md)
+for Kubernetes ingress/service mesh, controlled networks, LAN/edge, Raspberry
+Pi, BeagleBone, bare metal, industrial Android, and rotation guidance.
 
 ## Platforms And Signing
 
 The package includes exact natives for macOS ARM64, Linux
 ARM64, and Windows x86-64. Publisher signing is currently absent and documented
 separately from package digests. Package presence does not replace native
-execution evidence. Use [common troubleshooting](https://github.com/phuong-tran/coakka-publish/blob/main/docs/troubleshooting.md)
+execution evidence. Use [common troubleshooting](https://github.com/phuong-tran/coakka-samples/blob/main/docs/troubleshooting.md)
 for loader/CPU mismatch, dependencies, Gatekeeper, SmartScreen/Authenticode,
 checksums, certificates, and signing status.

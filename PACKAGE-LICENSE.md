@@ -1,29 +1,29 @@
-# CoAkka Connector Package Licensing
+# CoAkka Package License Map
 
-This distribution is a multi-license aggregate. Its licenses apply by file scope;
-they are not alternative licenses for the complete package.
+This package is free to use in applications, including commercial and
+production applications. Its licenses apply by file scope.
 
 ## Connector Material: Apache-2.0
 
-Language-level connector source, generated language bindings, type declarations,
-package/build metadata, examples, and package documentation are licensed under
-the Apache License, Version 2.0. The full terms are in `LICENSE`.
+Language-level connector source, generated bindings, type declarations,
+package metadata, examples, and package documentation are licensed under the
+Apache License, Version 2.0. The full terms are in `LICENSE`.
 
-## CoAkka Native Material
+## Native Material: CoAkka Native Artifact License 1.2
 
-CoAkka native shared or static libraries, native C headers, symbol files, and
-native-only provenance records are licensed under the CoAkka Public Artifact
-License 1.1. The full terms are in `NATIVE-LICENSE.md`.
+Compiled CoAkka native libraries or executables, native headers, native symbol
+files, and native-only provenance are licensed under the CoAkka Native Artifact
+License 1.2. The full terms are in `NATIVE-LICENSE.md`.
 
-This scope includes CoAkka payloads below `native/`, `runtimes/*/native/`,
-`META-INF/native/`, or another package-specific native payload directory, plus
-files explicitly identified as CoAkka native artifacts. Copying or extracting a
-native payload does not change its license.
+The Native Artifact License permits ordinary internal, production, commercial,
+application, and SaaS use. A separate agreement is required to sell or offer
+CoAkka itself as a managed runtime, control plane, appliance, cloud image, or
+substantially equivalent infrastructure service.
 
-## Third-Party Material
+## Aggregate Notice
 
-Third-party or vendored components retain their own license terms. Their notices
-are included with those components or in the package's third-party notices.
+`NOTICE` records the package identity and summarizes this file-scoped mapping.
+It does not replace either license.
 
-If a file contains an explicit license notice, that notice controls for that
-file. Otherwise, use the scope above.
+Public guidance and stable links are available in the
+[CoAkka package licensing guide](https://github.com/phuong-tran/coakka-samples/blob/main/docs/package-licensing.md).

@@ -1,13 +1,14 @@
 # Releasing The Swift Connector
 
-Current source version is `2.5.0`, paired with native
+Current source version is `2.5.1`, paired with native
 generation `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`; publisher signing is absent.
 
 The macOS ARM64 payload is rebuilt from exact native source snapshot
 `4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a` with deployment target `13.0`.
 Its SHA-256 is
 `956f6cf04c18a923cc6416366b1a1ee1e5cae67e6f61bf3988e6bbeb09db6a7c`.
-The other four payloads remain byte-identical to `2.5.0`.
+All five native payloads remain byte-identical to generation
+`2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`.
 
 ## Package Verification
 

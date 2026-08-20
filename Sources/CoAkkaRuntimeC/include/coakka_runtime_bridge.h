@@ -143,6 +143,35 @@ typedef struct coakka_swift_file_lane_config_t {
   const coakka_swift_file_lane_security_config_t *security;
 } coakka_swift_file_lane_config_t;
 
+typedef struct coakka_swift_lane_owner_config_t {
+  size_t struct_size;
+  const char *owner_instance_id;
+  const char *advertised_host;
+} coakka_swift_lane_owner_config_t;
+
+typedef struct coakka_swift_lane_owner_endpoint_t {
+  size_t struct_size;
+  uint16_t port;
+  uint16_t reserved;
+  char owner_instance_id[128];
+  char advertised_host[256];
+} coakka_swift_lane_owner_endpoint_t;
+
+typedef struct coakka_swift_file_lane_owned_config_t {
+  size_t struct_size;
+  coakka_swift_file_lane_config_t lane;
+  coakka_swift_lane_owner_config_t owner;
+} coakka_swift_file_lane_owned_config_t;
+
+typedef struct coakka_swift_file_receive_grant_t {
+  size_t struct_size;
+  coakka_swift_lane_owner_endpoint_t owner;
+  char transfer_id[65];
+  char authorization_token[129];
+  uint64_t expected_size;
+  uint8_t expected_sha256[32];
+} coakka_swift_file_receive_grant_t;
+
 typedef struct coakka_swift_file_transfer_snapshot_t {
   size_t struct_size;
   uint32_t direction;
@@ -227,6 +256,22 @@ typedef struct coakka_swift_stream_config_t {
   uint32_t recovery_after_ms;
   uint32_t pressure_observation_ms;
 } coakka_swift_stream_config_t;
+
+typedef struct coakka_swift_stream_owned_config_t {
+  size_t struct_size;
+  coakka_swift_stream_config_t lane;
+  coakka_swift_lane_owner_config_t owner;
+} coakka_swift_stream_owned_config_t;
+
+typedef struct coakka_swift_stream_publish_grant_t {
+  size_t struct_size;
+  coakka_swift_lane_owner_endpoint_t owner;
+  char session_id[65];
+  char authorization_token[129];
+  uint64_t format_id;
+  uint32_t max_frame_bytes;
+  uint32_t reserved;
+} coakka_swift_stream_publish_grant_t;
 
 typedef struct coakka_swift_stream_session_snapshot_t {
   size_t struct_size;
@@ -802,12 +847,15 @@ void coakka_swift_frame_release(coakka_swift_runtime_library_t *library,
                                 uint8_t *buf);
 
 int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library);
+int32_t coakka_swift_lane_owner_grants_available(coakka_swift_runtime_library_t *library);
 int32_t coakka_swift_file_lane_create(coakka_swift_runtime_library_t *library, const coakka_swift_file_lane_config_t *config, coakka_swift_file_lane_t **out_lane);
+int32_t coakka_swift_file_lane_create_owned(coakka_swift_runtime_library_t *library, const coakka_swift_file_lane_owned_config_t *config, coakka_swift_file_lane_t **out_lane);
 void coakka_swift_file_lane_destroy(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
 int32_t coakka_swift_file_lane_start(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
 int32_t coakka_swift_file_lane_stop(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
 int32_t coakka_swift_file_lane_get_bound_port(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, uint16_t *out_port);
 int32_t coakka_swift_file_lane_prepare_receive(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, const char *token, const char *path, uint64_t size, const uint8_t sha256[32]);
+int32_t coakka_swift_file_lane_prepare_receive_grant(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, const char *token, const char *path, uint64_t size, const uint8_t sha256[32], coakka_swift_file_receive_grant_t *out_grant);
 int32_t coakka_swift_file_lane_submit_send(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, const char *token, const char *host, uint16_t port, const char *path, uint64_t size, const uint8_t sha256[32], uint32_t timeout_ms);
 int32_t coakka_swift_file_lane_get_transfer(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction, coakka_swift_file_transfer_snapshot_t *out_snapshot);
 int32_t coakka_swift_file_lane_wait_transfer(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, const char *transfer_id, uint32_t direction, uint64_t after_sequence, uint32_t timeout_ms, coakka_swift_file_transfer_snapshot_t *out_snapshot);
@@ -820,6 +868,9 @@ int32_t coakka_swift_stream_available(coakka_swift_runtime_library_t *library);
 int32_t coakka_swift_stream_create(coakka_swift_runtime_library_t *library,
                                    const coakka_swift_stream_config_t *config,
                                    coakka_swift_stream_lane_t **out_lane);
+int32_t coakka_swift_stream_create_owned(coakka_swift_runtime_library_t *library,
+                                         const coakka_swift_stream_owned_config_t *config,
+                                         coakka_swift_stream_lane_t **out_lane);
 void coakka_swift_stream_destroy(coakka_swift_runtime_library_t *library,
                                  coakka_swift_stream_lane_t *lane);
 int32_t coakka_swift_stream_start(coakka_swift_runtime_library_t *library,
@@ -834,6 +885,11 @@ int32_t coakka_swift_stream_prepare_publish(
     const char *session_id, const char *token, uint64_t format_id,
     uint32_t max_frame_bytes, coakka_swift_stream_source_fn source,
     void *context);
+int32_t coakka_swift_stream_prepare_publish_grant(
+    coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
+    const char *session_id, const char *token, uint64_t format_id,
+    uint32_t max_frame_bytes, coakka_swift_stream_source_fn source,
+    void *context, coakka_swift_stream_publish_grant_t *out_grant);
 int32_t coakka_swift_stream_subscribe(
     coakka_swift_runtime_library_t *library, coakka_swift_stream_lane_t *lane,
     const char *session_id, const char *token, const char *host, uint16_t port,

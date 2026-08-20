@@ -15,7 +15,7 @@ request/reply, local handlers, deadletters, diagnostics, capability discovery,
 connection strategy, and atomic TLS/mTLS credential reload over the public C
 ABI.
 
-Current source version: `2.5.1`<br>
+Current source version: `2.5.2`<br>
 Bundled runtime: `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`; publisher signing: absent.
 
 The bundled macOS ARM64 dylib is rebuilt from the exact `4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a` native
@@ -147,9 +147,13 @@ the C bridge. Native waits are blocking. See the shared
 
 ## Stream Lane
 
-Version `2.5.1` contains the Stream Lane connector surface over exact native
+Version `2.5.2` contains the Stream Lane connector surface over exact native
 generation `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`. Keep that pairing intact and follow the public
 [streaming contract](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-streaming.md).
+Replica owners use `FileLane.openOwned`/`StreamLane.openOwned` and
+`prepareReceiveGrant`/`preparePublishGrant`. Grant values are `Codable`; decode
+them only from the authenticated control plane, then call `sendSpec` or
+`subscribeSpec`. See the [owner-grant ONE/ALL sample](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-lane-owner-grants.md).
 
 ## AI-Assisted Integration
 

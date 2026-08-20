@@ -102,6 +102,62 @@ public struct FileSendSpec: Sendable {
     self.expectedSHA256 = expectedSHA256
   }
 }
+/// Receiver-issued transfer capability pinned to one exact replica.
+/// The token is scoped to this transfer and may be reused only for bounded
+/// resume and idempotent completed-status handling while the owner retains it.
+public struct FileReceiveGrant: Sendable, Codable, CustomStringConvertible {
+  private enum CodingKeys: String, CodingKey {
+    case owner, transferID, authorizationToken, expectedSize, expectedSHA256
+  }
+
+  public let owner: LaneOwnerEndpoint
+  public let transferID: String
+  public let authorizationToken: String
+  public let expectedSize: UInt64
+  public let expectedSHA256: Data
+
+  public init(
+    owner: LaneOwnerEndpoint, transferID: String, authorizationToken: String,
+    expectedSize: UInt64, expectedSHA256: Data
+  ) {
+    self.owner = owner
+    self.transferID = transferID
+    self.authorizationToken = authorizationToken
+    self.expectedSize = expectedSize
+    self.expectedSHA256 = expectedSHA256
+  }
+
+  public init(from decoder: Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+    let owner = try values.decode(LaneOwnerEndpoint.self, forKey: .owner)
+    let transferID = try values.decode(String.self, forKey: .transferID)
+    let authorizationToken = try values.decode(String.self, forKey: .authorizationToken)
+    let expectedSize = try values.decode(UInt64.self, forKey: .expectedSize)
+    let expectedSHA256 = try values.decode(Data.self, forKey: .expectedSHA256)
+    try owner.validate()
+    try validateVisibleASCII(transferID, name: "transferID", maximum: 64)
+    try validateVisibleASCII(authorizationToken, name: "authorizationToken", maximum: 128)
+    guard expectedSHA256.count == 32 else {
+      throw RuntimeError.invalidArgument("expectedSHA256 must contain exactly 32 bytes")
+    }
+    self.init(
+      owner: owner, transferID: transferID, authorizationToken: authorizationToken,
+      expectedSize: expectedSize, expectedSHA256: expectedSHA256)
+  }
+
+  public func sendSpec(sourcePath: String, timeoutMs: UInt32 = 0) -> FileSendSpec {
+    var result = FileSendSpec(
+      transferID: transferID, authorizationToken: authorizationToken,
+      remoteHost: owner.advertisedHost, remotePort: owner.port,
+      sourcePath: sourcePath, expectedSize: expectedSize, expectedSHA256: expectedSHA256)
+    result.timeoutMs = timeoutMs
+    return result
+  }
+
+  public var description: String {
+    "FileReceiveGrant(owner: \(owner), transferID: \(transferID), authorizationToken: <redacted>, expectedSize: \(expectedSize))"
+  }
+}
 /// A file SHA-256 and exact byte count.
 public struct FileDigest: Equatable, Sendable {
   public let sha256: Data
@@ -150,9 +206,11 @@ public final class FileLane: @unchecked Sendable {
   private var lane: OpaquePointer?
   private var closing = false
   private var activeCalls = 0
-  private init(library: NativeRuntimeLibrary, lane: OpaquePointer) {
+  private let ownerAware: Bool
+  private init(library: NativeRuntimeLibrary, lane: OpaquePointer, ownerAware: Bool) {
     self.library = library
     self.lane = lane
+    self.ownerAware = ownerAware
   }
   /// Opens and starts a lane, failing when file transfer is unavailable.
   /// - Parameters:
@@ -160,6 +218,21 @@ public final class FileLane: @unchecked Sendable {
   ///   - runtimeLibPath: Explicit core-runtime path, or `nil` for connector resolution.
   public static func open(
     _ config: FileLaneConfig = FileLaneConfig(), runtimeLibPath: String? = nil
+  ) throws -> FileLane {
+    try openInternal(config, owner: nil, runtimeLibPath: runtimeLibPath)
+  }
+
+  /// Opens a lane that can issue replica-pinned receive grants.
+  public static func openOwned(
+    _ config: FileLaneConfig = FileLaneConfig(), owner: LaneOwnerConfig,
+    runtimeLibPath: String? = nil
+  ) throws -> FileLane {
+    try owner.validate()
+    return try openInternal(config, owner: owner, runtimeLibPath: runtimeLibPath)
+  }
+
+  private static func openInternal(
+    _ config: FileLaneConfig, owner: LaneOwnerConfig?, runtimeLibPath: String?
   ) throws -> FileLane {
     let allowedFlags = FileLaneFlags.sender.rawValue | FileLaneFlags.receiver.rawValue
     guard !config.flags.isEmpty, config.flags.rawValue & ~allowedFlags == 0,
@@ -170,10 +243,12 @@ public final class FileLane: @unchecked Sendable {
     guard coakka_swift_file_lane_available(handle) != 0 else {
       throw RuntimeError.loadFailed("native runtime does not export file-lane ABI")
     }
+    if owner != nil { try requireLaneOwnerGrants(library) }
     let strings = CStringOwner([
       config.bindHost, config.security?.credentialID ?? "",
       config.security?.caCertificateFile ?? "", config.security?.identityCertificateFile ?? "",
-      config.security?.privateKeyFile ?? "",
+      config.security?.privateKeyFile ?? "", owner?.ownerInstanceID ?? "",
+      owner?.advertisedHost ?? "",
     ])
     var security = coakka_swift_file_lane_security_config_t()
     if let value = config.security {
@@ -200,11 +275,28 @@ public final class FileLane: @unchecked Sendable {
     native.receiver_worker_count = config.receiverWorkerCount
     var out: OpaquePointer?
     let createStatus: Int32
+    var nativeOwner = coakka_swift_lane_owner_config_t()
+    nativeOwner.struct_size = MemoryLayout.size(ofValue: nativeOwner)
+    nativeOwner.owner_instance_id = UnsafePointer(strings[5])
+    nativeOwner.advertised_host = UnsafePointer(strings[6])
     if config.security != nil {
       createStatus = withUnsafePointer(to: &security) {
         native.security = $0
+        if owner != nil {
+          var owned = coakka_swift_file_lane_owned_config_t()
+          owned.struct_size = MemoryLayout.size(ofValue: owned)
+          owned.lane = native
+          owned.owner = nativeOwner
+          return coakka_swift_file_lane_create_owned(handle, &owned, &out)
+        }
         return coakka_swift_file_lane_create(handle, &native, &out)
       }
+    } else if owner != nil {
+      var owned = coakka_swift_file_lane_owned_config_t()
+      owned.struct_size = MemoryLayout.size(ofValue: owned)
+      owned.lane = native
+      owned.owner = nativeOwner
+      createStatus = coakka_swift_file_lane_create_owned(handle, &owned, &out)
     } else {
       createStatus = coakka_swift_file_lane_create(handle, &native, &out)
     }
@@ -215,7 +307,7 @@ public final class FileLane: @unchecked Sendable {
       coakka_swift_file_lane_destroy(handle, out)
       try throwIfNativeError(start, operation: "file_lane_start")
     }
-    return FileLane(library: library, lane: out)
+    return FileLane(library: library, lane: out, ownerAware: owner != nil)
   }
   /// Computes the exact source identity through the selected core-runtime.
   /// - Parameters:
@@ -246,7 +338,7 @@ public final class FileLane: @unchecked Sendable {
     }
   }
   /// Authorizes one destination and expected content identity.
-  /// - Parameter spec: Local destination, one-use grant, exact byte size, and SHA-256.
+  /// - Parameter spec: Local destination, transfer-scoped token, exact byte size, and SHA-256.
   public func prepareReceive(_ spec: FileReceiveSpec) throws {
     guard spec.expectedSHA256.count == 32 else {
       throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
@@ -260,6 +352,38 @@ public final class FileLane: @unchecked Sendable {
             b.bindMemory(to: UInt8.self).baseAddress),
           operation: "file_lane_prepare_receive")
       }
+    }
+  }
+  /// Prepares one receive and returns a capability containing this replica's exact endpoint.
+  public func prepareReceiveGrant(_ spec: FileReceiveSpec) throws -> FileReceiveGrant {
+    guard ownerAware else {
+      throw RuntimeError.invalidArgument("file lane was not opened with openOwned")
+    }
+    guard spec.expectedSHA256.count == 32 else {
+      throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
+    }
+    return try withLane { h, l in
+      let c = CStringOwner([spec.transferID, spec.authorizationToken, spec.destinationPath])
+      var grant = coakka_swift_file_receive_grant_t()
+      try spec.expectedSHA256.withUnsafeBytes { b in
+        try throwIfNativeError(
+          coakka_swift_file_lane_prepare_receive_grant(
+            h, l, c[0], c[1], c[2], spec.expectedSize,
+            b.bindMemory(to: UInt8.self).baseAddress, &grant),
+          operation: "file_lane_prepare_receive_grant")
+      }
+      var ownerID = grant.owner.owner_instance_id
+      var advertisedHost = grant.owner.advertised_host
+      var transferID = grant.transfer_id
+      var token = grant.authorization_token
+      var digest = grant.expected_sha256
+      let digestData = withUnsafeBytes(of: &digest) { Data($0) }
+      return FileReceiveGrant(
+        owner: LaneOwnerEndpoint(
+          ownerInstanceID: fixedString(&ownerID), advertisedHost: fixedString(&advertisedHost),
+          port: grant.owner.port),
+        transferID: fixedString(&transferID), authorizationToken: fixedString(&token),
+        expectedSize: grant.expected_size, expectedSHA256: digestData)
     }
   }
   /// Queues a send after the remote application prepares the receive.

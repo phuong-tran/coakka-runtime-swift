@@ -351,10 +351,12 @@ void coakka_swift_runtime_library_close(coakka_swift_runtime_library_t *library)
 typedef struct { size_t struct_size; const char *id; const char *token; const char *path; uint64_t size; uint8_t sha[32]; } swift_native_file_receive_t;
 typedef struct { size_t struct_size; const char *id; const char *token; const char *host; uint16_t port; const char *path; uint64_t size; uint8_t sha[32]; uint32_t timeout; } swift_native_file_send_t;
 typedef int32_t (*swift_file_create_fn)(const coakka_swift_file_lane_config_t *, coakka_swift_file_lane_t **);
+typedef int32_t (*swift_file_create_owned_fn)(const coakka_swift_file_lane_owned_config_t *, coakka_swift_file_lane_t **);
 typedef void (*swift_file_destroy_fn)(coakka_swift_file_lane_t *);
 typedef int32_t (*swift_file_simple_fn)(coakka_swift_file_lane_t *);
 typedef int32_t (*swift_file_port_fn)(coakka_swift_file_lane_t *, uint16_t *);
 typedef int32_t (*swift_file_prepare_fn)(coakka_swift_file_lane_t *, const swift_native_file_receive_t *);
+typedef int32_t (*swift_file_prepare_grant_fn)(coakka_swift_file_lane_t *, const swift_native_file_receive_t *, coakka_swift_file_receive_grant_t *);
 typedef int32_t (*swift_file_submit_fn)(coakka_swift_file_lane_t *, const swift_native_file_send_t *);
 typedef int32_t (*swift_file_get_fn)(coakka_swift_file_lane_t *, const char *, uint32_t, coakka_swift_file_transfer_snapshot_t *);
 typedef int32_t (*swift_file_wait_fn)(coakka_swift_file_lane_t *, const char *, uint32_t, uint64_t, uint32_t, coakka_swift_file_transfer_snapshot_t *);
@@ -363,6 +365,17 @@ typedef int32_t (*swift_file_stats_fn)(coakka_swift_file_lane_t *, coakka_swift_
 typedef int32_t (*swift_file_sha_fn)(const char *, uint8_t[32], uint64_t *);
 
 #define SWIFT_FILE_SYMBOL(lib, type, name) ((type)platform_library_symbol((lib)->handle, (name)))
+int32_t coakka_swift_lane_owner_grants_available(coakka_swift_runtime_library_t *library) {
+    runtime_library_t *lib = as_library(library);
+    if (lib == NULL || lib->get_info == NULL) return 0;
+    native_runtime_info_t info = {0};
+    info.struct_size = sizeof(info);
+    if (lib->get_info(&info) != 0 || (info.feature_flags & (1u << 25)) == 0) return 0;
+    return SWIFT_FILE_SYMBOL(lib, swift_file_create_owned_fn, "coakka_v2_file_lane_create_owned_ex") != NULL &&
+           SWIFT_FILE_SYMBOL(lib, swift_file_prepare_grant_fn, "coakka_v2_file_lane_prepare_receive_grant") != NULL &&
+           platform_library_symbol(lib->handle, "coakka_v2_stream_lane_create_owned_ex") != NULL &&
+           platform_library_symbol(lib->handle, "coakka_v2_stream_lane_prepare_publish_grant") != NULL;
+}
 int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library) {
     runtime_library_t *lib = as_library(library);
     return lib != NULL &&
@@ -381,11 +394,13 @@ int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library
            SWIFT_FILE_SYMBOL(lib, swift_file_sha_fn, "coakka_v2_file_sha256_path") != NULL;
 }
 int32_t coakka_swift_file_lane_create(coakka_swift_runtime_library_t *library,const coakka_swift_file_lane_config_t *config,coakka_swift_file_lane_t **out){runtime_library_t *lib=as_library(library);swift_file_create_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_create_fn,"coakka_v2_file_lane_create_ex"):NULL;return f?f(config,out):COAKKA_SWIFT_ERR_SYMBOL;}
+int32_t coakka_swift_file_lane_create_owned(coakka_swift_runtime_library_t *library,const coakka_swift_file_lane_owned_config_t *config,coakka_swift_file_lane_t **out){runtime_library_t *lib=as_library(library);swift_file_create_owned_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_create_owned_fn,"coakka_v2_file_lane_create_owned_ex"):NULL;return f?f(config,out):COAKKA_SWIFT_ERR_SYMBOL;}
 void coakka_swift_file_lane_destroy(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_destroy_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_destroy_fn,"coakka_v2_file_lane_destroy"):NULL;if(f)f(lane);}
 int32_t coakka_swift_file_lane_start(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_simple_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_simple_fn,"coakka_v2_file_lane_start"):NULL;return f?f(lane):COAKKA_SWIFT_ERR_SYMBOL;}
 int32_t coakka_swift_file_lane_stop(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane){runtime_library_t *lib=as_library(library);swift_file_simple_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_simple_fn,"coakka_v2_file_lane_stop"):NULL;return f?f(lane):COAKKA_SWIFT_ERR_SYMBOL;}
 int32_t coakka_swift_file_lane_get_bound_port(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,uint16_t*out){runtime_library_t*lib=as_library(library);swift_file_port_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_port_fn,"coakka_v2_file_lane_get_bound_port"):NULL;return f?f(lane,out):COAKKA_SWIFT_ERR_SYMBOL;}
 int32_t coakka_swift_file_lane_prepare_receive(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,const char*id,const char*token,const char*path,uint64_t size,const uint8_t sha[32]){runtime_library_t*lib=as_library(library);swift_file_prepare_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_prepare_fn,"coakka_v2_file_lane_prepare_receive"):NULL;if(!f||!sha)return COAKKA_SWIFT_ERR_SYMBOL;swift_native_file_receive_t s={sizeof(s),id,token,path,size,{0}};memcpy(s.sha,sha,32);return f(lane,&s);}
+int32_t coakka_swift_file_lane_prepare_receive_grant(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,const char*id,const char*token,const char*path,uint64_t size,const uint8_t sha[32],coakka_swift_file_receive_grant_t*out){runtime_library_t*lib=as_library(library);swift_file_prepare_grant_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_prepare_grant_fn,"coakka_v2_file_lane_prepare_receive_grant"):NULL;if(!f||!sha||!out)return COAKKA_SWIFT_ERR_SYMBOL;swift_native_file_receive_t s={sizeof(s),id,token,path,size,{0}};memcpy(s.sha,sha,32);memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);return f(lane,&s,out);}
 int32_t coakka_swift_file_lane_submit_send(coakka_swift_runtime_library_t *library,coakka_swift_file_lane_t *lane,const char*id,const char*token,const char*host,uint16_t port,const char*path,uint64_t size,const uint8_t sha[32],uint32_t timeout){runtime_library_t*lib=as_library(library);swift_file_submit_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_submit_fn,"coakka_v2_file_lane_submit_send"):NULL;if(!f||!sha)return COAKKA_SWIFT_ERR_SYMBOL;swift_native_file_send_t s={sizeof(s),id,token,host,port,path,size,{0},timeout};memcpy(s.sha,sha,32);return f(lane,&s);}
 int32_t coakka_swift_file_lane_get_transfer(coakka_swift_runtime_library_t*library,coakka_swift_file_lane_t*lane,const char*id,uint32_t d,coakka_swift_file_transfer_snapshot_t*out){runtime_library_t*lib=as_library(library);swift_file_get_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_get_fn,"coakka_v2_file_lane_get_transfer"):NULL;if(out){memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);}return f?f(lane,id,d,out):COAKKA_SWIFT_ERR_SYMBOL;}
 int32_t coakka_swift_file_lane_wait_transfer(coakka_swift_runtime_library_t*library,coakka_swift_file_lane_t*lane,const char*id,uint32_t d,uint64_t seq,uint32_t ms,coakka_swift_file_transfer_snapshot_t*out){runtime_library_t*lib=as_library(library);swift_file_wait_fn f=lib?SWIFT_FILE_SYMBOL(lib,swift_file_wait_fn,"coakka_v2_file_lane_wait_transfer"):NULL;if(out){memset(out,0,sizeof(*out));out->struct_size=sizeof(*out);}return f?f(lane,id,d,seq,ms,out):COAKKA_SWIFT_ERR_SYMBOL;}
@@ -418,12 +433,17 @@ typedef struct {
 } swift_native_stream_subscribe_t;
 typedef int32_t (*swift_stream_create_fn)(const coakka_swift_stream_config_t *,
                                           coakka_swift_stream_lane_t **);
+typedef int32_t (*swift_stream_create_owned_fn)(const coakka_swift_stream_owned_config_t *,
+                                                coakka_swift_stream_lane_t **);
 typedef void (*swift_stream_destroy_fn)(coakka_swift_stream_lane_t *);
 typedef int32_t (*swift_stream_simple_fn)(coakka_swift_stream_lane_t *);
 typedef int32_t (*swift_stream_port_fn)(coakka_swift_stream_lane_t *,
                                         uint16_t *);
 typedef int32_t (*swift_stream_publish_fn)(
     coakka_swift_stream_lane_t *, const swift_native_stream_publish_t *);
+typedef int32_t (*swift_stream_publish_grant_fn)(
+    coakka_swift_stream_lane_t *, const swift_native_stream_publish_t *,
+    coakka_swift_stream_publish_grant_t *);
 typedef int32_t (*swift_stream_subscribe_fn)(
     coakka_swift_stream_lane_t *, const swift_native_stream_subscribe_t *);
 typedef int32_t (*swift_stream_get_fn)(
@@ -487,6 +507,16 @@ int32_t coakka_swift_stream_create(coakka_swift_runtime_library_t *l,
           : NULL;
   return f ? f(c, out) : COAKKA_SWIFT_ERR_SYMBOL;
 }
+int32_t coakka_swift_stream_create_owned(coakka_swift_runtime_library_t *l,
+                                         const coakka_swift_stream_owned_config_t *c,
+                                         coakka_swift_stream_lane_t **out) {
+  runtime_library_t *lib = as_library(l);
+  swift_stream_create_owned_fn f =
+      lib ? SWIFT_STREAM_SYMBOL(lib, swift_stream_create_owned_fn,
+                                "coakka_v2_stream_lane_create_owned_ex")
+          : NULL;
+  return f ? f(c, out) : COAKKA_SWIFT_ERR_SYMBOL;
+}
 void coakka_swift_stream_destroy(coakka_swift_runtime_library_t *l,
                                  coakka_swift_stream_lane_t *lane) {
   runtime_library_t *lib = as_library(l);
@@ -537,6 +567,22 @@ int32_t coakka_swift_stream_prepare_publish(
   swift_native_stream_publish_t s = {sizeof(s), id,     token,  format,
                                      max_frame, source, context};
   return f ? f(lane, &s) : COAKKA_SWIFT_ERR_SYMBOL;
+}
+int32_t coakka_swift_stream_prepare_publish_grant(
+    coakka_swift_runtime_library_t *l, coakka_swift_stream_lane_t *lane,
+    const char *id, const char *token, uint64_t format, uint32_t max_frame,
+    coakka_swift_stream_source_fn source, void *context,
+    coakka_swift_stream_publish_grant_t *out) {
+  runtime_library_t *lib = as_library(l);
+  swift_stream_publish_grant_fn f =
+      lib ? SWIFT_STREAM_SYMBOL(lib, swift_stream_publish_grant_fn,
+                                "coakka_v2_stream_lane_prepare_publish_grant")
+          : NULL;
+  if (!f || !out) return COAKKA_SWIFT_ERR_SYMBOL;
+  swift_native_stream_publish_t s = {sizeof(s), id, token, format, max_frame, source, context};
+  memset(out, 0, sizeof(*out));
+  out->struct_size = sizeof(*out);
+  return f(lane, &s, out);
 }
 int32_t coakka_swift_stream_subscribe(
     coakka_swift_runtime_library_t *l, coakka_swift_stream_lane_t *lane,

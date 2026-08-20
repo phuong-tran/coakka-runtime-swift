@@ -1,6 +1,6 @@
 # Releasing The Swift Connector
 
-Current source version is `2.5.1`, paired with native
+Current source version is `2.5.2`, paired with native
 generation `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`; publisher signing is absent.
 
 The macOS ARM64 payload is rebuilt from exact native source snapshot

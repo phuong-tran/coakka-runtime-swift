@@ -121,7 +121,11 @@ final class CoAkkaRuntimeTests: XCTestCase {
         receiverConfig.flags = [.receiver]
         var senderConfig = FileLaneConfig()
         senderConfig.flags = [.sender]
-        let receiver = try FileLane.open(receiverConfig, runtimeLibPath: runtime)
+        let receiver = try FileLane.openOwned(
+            receiverConfig,
+            owner: LaneOwnerConfig(
+                ownerInstanceID: "swift-file-replica-2", advertisedHost: "127.0.0.1"),
+            runtimeLibPath: runtime)
         let sender = try FileLane.open(senderConfig, runtimeLibPath: runtime)
         defer {
             try? sender.close()
@@ -129,7 +133,7 @@ final class CoAkkaRuntimeTests: XCTestCase {
         }
         let id = "swift-file-lane-multi-quantum"
         let token = "swift-file-lane-token"
-        try receiver.prepareReceive(
+        let grant = try receiver.prepareReceiveGrant(
             FileReceiveSpec(
                 transferID: id,
                 authorizationToken: token,
@@ -138,17 +142,12 @@ final class CoAkkaRuntimeTests: XCTestCase {
                 expectedSHA256: digest.sha256
             )
         )
-        try sender.submitSend(
-            FileSendSpec(
-                transferID: id,
-                authorizationToken: token,
-                remoteHost: "127.0.0.1",
-                remotePort: try receiver.boundPort,
-                sourcePath: source.path,
-                expectedSize: digest.size,
-                expectedSHA256: digest.sha256
-            )
-        )
+        XCTAssertEqual(grant.owner.ownerInstanceID, "swift-file-replica-2")
+        XCTAssertEqual(grant.owner.advertisedHost, "127.0.0.1")
+        XCTAssertGreaterThan(grant.owner.port, 0)
+        let receivedGrant = try JSONDecoder().decode(
+          FileReceiveGrant.self, from: JSONEncoder().encode(grant))
+        try sender.submitSend(receivedGrant.sendSpec(sourcePath: source.path))
         let sent = try waitTerminal(sender, id, .send)
         let received = try waitTerminal(receiver, id, .receive)
         XCTAssertTrue(sent.succeeded, sent.detail)

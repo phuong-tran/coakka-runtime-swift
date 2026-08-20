@@ -3,16 +3,21 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-package_version="2.5.1"
+package_version="2.5.2"
 archive="${swift_root}/coakka-runtime-swift-${package_version}.tar.gz"
 work_root="$(mktemp -d "${TMPDIR:-/tmp}/coakka-swift-package.XXXXXX")"
 package_root="${work_root}/coakka-runtime-swift-${package_version}"
 
 trap 'rm -rf "${work_root}"' EXIT
 
-bash "${script_dir}/export-module-repo.sh" "${package_root}" >/dev/null
-rm -f "${archive}"
-COPYFILE_DISABLE=1 tar -C "${work_root}" -czf "${archive}" "$(basename "${package_root}")"
+if [[ "${COAKKA_SWIFT_USE_EXISTING_PACKAGE:-0}" == "1" ]]; then
+  [[ -f "${archive}" ]] || { echo "[swift-package-readiness] missing archive: ${archive}" >&2; exit 1; }
+  tar -xzf "${archive}" -C "${work_root}"
+else
+  bash "${script_dir}/export-module-repo.sh" "${package_root}" >/dev/null
+  rm -f "${archive}"
+  COPYFILE_DISABLE=1 tar -C "${work_root}" -czf "${archive}" "$(basename "${package_root}")"
+fi
 
 required=(
   Package.swift
@@ -62,7 +67,7 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     metadata = json.load(stream)
 
-assert metadata["artifact_version"] == "2.5.1"
+assert metadata["artifact_version"] == "2.5.2"
 assert metadata["bundled_native_package_version"] == "2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a"
 assert metadata["publisher_signing"] == "absent"
 assert metadata["supported_platforms"] == [

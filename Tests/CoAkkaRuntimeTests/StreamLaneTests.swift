@@ -14,7 +14,11 @@ final class StreamLaneTests: XCTestCase {
     }
     var publisherConfig = StreamLaneConfig()
     publisherConfig.flags = [.publisher]
-    let publisher = try StreamLane.open(publisherConfig, runtimeLibPath: runtime)
+    let publisher = try StreamLane.openOwned(
+      publisherConfig,
+      owner: LaneOwnerConfig(
+        ownerInstanceID: "swift-stream-replica-3", advertisedHost: "127.0.0.1"),
+      runtimeLibPath: runtime)
     defer { try? publisher.close() }
     var subscriberConfig = StreamLaneConfig()
     subscriberConfig.flags = [.subscriber]
@@ -22,18 +26,19 @@ final class StreamLaneTests: XCTestCase {
     defer { try? subscriber.close() }
 
     let source = LockedStreamBytes(payload)
-    try publisher.preparePublish(
+    let grant = try publisher.preparePublishGrant(
       StreamPublishSpec(
         sessionID: "swift-stream", authorizationToken: "swift-token", formatID: 0x4341_4D31,
         maxFrameBytes: 64 * 1024
       ) { destination in source.fill(destination) })
     let sink = LockedStreamBytes()
+    XCTAssertEqual(grant.owner.ownerInstanceID, "swift-stream-replica-3")
+    XCTAssertEqual(grant.owner.advertisedHost, "127.0.0.1")
+    XCTAssertGreaterThan(grant.owner.port, 0)
+    let receivedGrant = try JSONDecoder().decode(
+      StreamPublishGrant.self, from: JSONEncoder().encode(grant))
     try subscriber.subscribe(
-      StreamSubscribeSpec(
-        sessionID: "swift-stream", authorizationToken: "swift-token", remoteHost: "127.0.0.1",
-        remotePort: try publisher.boundPort, formatID: 0x4341_4D31, maxFrameBytes: 64 * 1024,
-        initialWindowBytes: 256 * 1024
-      ) { frame, _ in
+      receivedGrant.subscribeSpec(initialWindowBytes: 256 * 1024) { frame, _ in
         sink.append(frame)
         return .continue
       })

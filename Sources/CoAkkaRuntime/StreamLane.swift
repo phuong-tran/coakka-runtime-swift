@@ -167,6 +167,65 @@ public struct StreamSubscribeSpec {
   }
 }
 
+/// Single-admission publish capability pinned to one exact replica.
+/// The first valid OPEN consumes the token; retry requires a fresh grant.
+public struct StreamPublishGrant: Sendable, Codable, CustomStringConvertible {
+  private enum CodingKeys: String, CodingKey {
+    case owner, sessionID, authorizationToken, formatID, maxFrameBytes
+  }
+
+  public let owner: LaneOwnerEndpoint
+  public let sessionID: String
+  public let authorizationToken: String
+  public let formatID: UInt64
+  public let maxFrameBytes: UInt32
+
+  public init(
+    owner: LaneOwnerEndpoint, sessionID: String, authorizationToken: String,
+    formatID: UInt64, maxFrameBytes: UInt32
+  ) {
+    self.owner = owner
+    self.sessionID = sessionID
+    self.authorizationToken = authorizationToken
+    self.formatID = formatID
+    self.maxFrameBytes = maxFrameBytes
+  }
+
+  public init(from decoder: Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+    let owner = try values.decode(LaneOwnerEndpoint.self, forKey: .owner)
+    let sessionID = try values.decode(String.self, forKey: .sessionID)
+    let authorizationToken = try values.decode(String.self, forKey: .authorizationToken)
+    let formatID = try values.decode(UInt64.self, forKey: .formatID)
+    let maxFrameBytes = try values.decode(UInt32.self, forKey: .maxFrameBytes)
+    try owner.validate()
+    try validateVisibleASCII(sessionID, name: "sessionID", maximum: 64)
+    try validateVisibleASCII(authorizationToken, name: "authorizationToken", maximum: 128)
+    guard formatID != 0 else { throw RuntimeError.invalidArgument("formatID must be non-zero") }
+    guard maxFrameBytes != 0, maxFrameBytes <= 4 * 1024 * 1024 else {
+      throw RuntimeError.invalidArgument("maxFrameBytes must be in [1, 4194304]")
+    }
+    self.init(
+      owner: owner, sessionID: sessionID, authorizationToken: authorizationToken,
+      formatID: formatID, maxFrameBytes: maxFrameBytes)
+  }
+
+  public func subscribeSpec(
+    initialWindowBytes: UInt32, timeoutMs: UInt32 = 0,
+    consumer: @escaping StreamConsumer
+  ) -> StreamSubscribeSpec {
+    StreamSubscribeSpec(
+      sessionID: sessionID, authorizationToken: authorizationToken,
+      remoteHost: owner.advertisedHost, remotePort: owner.port,
+      formatID: formatID, maxFrameBytes: maxFrameBytes,
+      initialWindowBytes: initialWindowBytes, timeoutMs: timeoutMs, consumer: consumer)
+  }
+
+  public var description: String {
+    "StreamPublishGrant(owner: \(owner), sessionID: \(sessionID), authorizationToken: <redacted>, formatID: \(formatID), maxFrameBytes: \(maxFrameBytes))"
+  }
+}
+
 /// Copied session progress with process-local monotonic timestamps.
 /// Frame and byte counters are cumulative for this side; `updateSequence`
 /// advances whenever retained state changes.
@@ -254,9 +313,11 @@ public final class StreamLane: @unchecked Sendable {
   private var closing = false
   private var activeCalls = 0
   private var callbacks: [StreamCallbackKey: UnsafeMutableRawPointer] = [:]
-  private init(library: NativeRuntimeLibrary, lane: OpaquePointer) {
+  private let ownerAware: Bool
+  private init(library: NativeRuntimeLibrary, lane: OpaquePointer, ownerAware: Bool) {
     self.library = library
     self.lane = lane
+    self.ownerAware = ownerAware
   }
 
   /// Opens and starts a lane.
@@ -266,6 +327,21 @@ public final class StreamLane: @unchecked Sendable {
   public static func open(
     _ config: StreamLaneConfig = StreamLaneConfig(),
     runtimeLibPath: String? = nil
+  ) throws -> StreamLane {
+    try openInternal(config, owner: nil, runtimeLibPath: runtimeLibPath)
+  }
+
+  /// Opens a lane that can issue replica-pinned publish grants.
+  public static func openOwned(
+    _ config: StreamLaneConfig = StreamLaneConfig(), owner: LaneOwnerConfig,
+    runtimeLibPath: String? = nil
+  ) throws -> StreamLane {
+    try owner.validate()
+    return try openInternal(config, owner: owner, runtimeLibPath: runtimeLibPath)
+  }
+
+  private static func openInternal(
+    _ config: StreamLaneConfig, owner: LaneOwnerConfig?, runtimeLibPath: String?
   ) throws -> StreamLane {
     let allowed = StreamLaneFlags.publisher.rawValue | StreamLaneFlags.subscriber.rawValue
     guard !config.flags.isEmpty, config.flags.rawValue & ~allowed == 0, config.capacity <= 64,
@@ -284,10 +360,12 @@ public final class StreamLane: @unchecked Sendable {
     guard coakka_swift_stream_available(handle) != 0 else {
       throw RuntimeError.loadFailed("native runtime does not export complete stream-lane ABI")
     }
+    if owner != nil { try requireLaneOwnerGrants(library) }
     let strings = StreamCStringOwner([
       config.bindHost, config.security?.credentialID ?? "",
       config.security?.caCertificateFile ?? "", config.security?.identityCertificateFile ?? "",
-      config.security?.privateKeyFile ?? "",
+      config.security?.privateKeyFile ?? "", owner?.ownerInstanceID ?? "",
+      owner?.advertisedHost ?? "",
     ])
     var security = coakka_swift_stream_security_config_t()
     if let value = config.security {
@@ -319,11 +397,28 @@ public final class StreamLane: @unchecked Sendable {
     native.pressure_observation_ms = config.pressureObservationMs
     var out: OpaquePointer?
     let status: Int32
+    var nativeOwner = coakka_swift_lane_owner_config_t()
+    nativeOwner.struct_size = MemoryLayout.size(ofValue: nativeOwner)
+    nativeOwner.owner_instance_id = strings[5]
+    nativeOwner.advertised_host = strings[6]
     if config.security != nil {
       status = withUnsafePointer(to: &security) {
         native.security = $0
+        if owner != nil {
+          var owned = coakka_swift_stream_owned_config_t()
+          owned.struct_size = MemoryLayout.size(ofValue: owned)
+          owned.lane = native
+          owned.owner = nativeOwner
+          return coakka_swift_stream_create_owned(handle, &owned, &out)
+        }
         return coakka_swift_stream_create(handle, &native, &out)
       }
+    } else if owner != nil {
+      var owned = coakka_swift_stream_owned_config_t()
+      owned.struct_size = MemoryLayout.size(ofValue: owned)
+      owned.lane = native
+      owned.owner = nativeOwner
+      status = coakka_swift_stream_create_owned(handle, &owned, &out)
     } else {
       status = coakka_swift_stream_create(handle, &native, &out)
     }
@@ -334,7 +429,7 @@ public final class StreamLane: @unchecked Sendable {
       coakka_swift_stream_destroy(handle, out)
       try throwIfNativeError(start, operation: "stream_lane_start")
     }
-    return StreamLane(library: library, lane: out)
+    return StreamLane(library: library, lane: out, ownerAware: owner != nil)
   }
 
   /// Publisher port selected when the lane started.
@@ -352,17 +447,43 @@ public final class StreamLane: @unchecked Sendable {
   /// Prepares an authorized publisher and retains its source until `forget` or `close`.
   /// - Parameter spec: Session identity, opaque format, frame bound, and bounded source callback.
   public func preparePublish(_ spec: StreamPublishSpec) throws {
+    _ = try preparePublishInternal(spec, grantRequested: false)
+  }
+
+  /// Prepares one publisher and returns a single-admission capability for this replica.
+  public func preparePublishGrant(_ spec: StreamPublishSpec) throws -> StreamPublishGrant {
+    guard ownerAware else {
+      throw RuntimeError.invalidArgument("stream lane was not opened with openOwned")
+    }
+    guard let grant = try preparePublishInternal(spec, grantRequested: true) else {
+      throw RuntimeError.nativeStatus(-2, "stream_lane_prepare_publish_grant")
+    }
+    return grant
+  }
+
+  private func preparePublishInternal(
+    _ spec: StreamPublishSpec, grantRequested: Bool
+  ) throws -> StreamPublishGrant? {
     try validate(spec.sessionID, spec.authorizationToken, spec.maxFrameBytes)
-    try withLane { h, l in
+    return try withLane { h, l in
       let holder = Unmanaged.passRetained(StreamSourceHolder(spec.source))
       let pointer = holder.toOpaque()
       let strings = StreamCStringOwner([spec.sessionID, spec.authorizationToken])
+      var nativeGrant = coakka_swift_stream_publish_grant_t()
       do {
-        try throwIfNativeError(
-          coakka_swift_stream_prepare_publish(
-            h, l, strings[0], strings[1],
-            spec.formatID, spec.maxFrameBytes, streamSourceThunk, pointer),
-          operation: "stream_lane_prepare_publish")
+        if grantRequested {
+          try throwIfNativeError(
+            coakka_swift_stream_prepare_publish_grant(
+              h, l, strings[0], strings[1], spec.formatID, spec.maxFrameBytes,
+              streamSourceThunk, pointer, &nativeGrant),
+            operation: "stream_lane_prepare_publish_grant")
+        } else {
+          try throwIfNativeError(
+            coakka_swift_stream_prepare_publish(
+              h, l, strings[0], strings[1],
+              spec.formatID, spec.maxFrameBytes, streamSourceThunk, pointer),
+            operation: "stream_lane_prepare_publish")
+        }
       } catch {
         holder.release()
         throw error
@@ -370,6 +491,17 @@ public final class StreamLane: @unchecked Sendable {
       condition.lock()
       callbacks[StreamCallbackKey(id: spec.sessionID, direction: .publish)] = pointer
       condition.unlock()
+      guard grantRequested else { return nil }
+      var ownerID = nativeGrant.owner.owner_instance_id
+      var advertisedHost = nativeGrant.owner.advertised_host
+      var sessionID = nativeGrant.session_id
+      var token = nativeGrant.authorization_token
+      return StreamPublishGrant(
+        owner: LaneOwnerEndpoint(
+          ownerInstanceID: fixedString(&ownerID), advertisedHost: fixedString(&advertisedHost),
+          port: nativeGrant.owner.port),
+        sessionID: fixedString(&sessionID), authorizationToken: fixedString(&token),
+        formatID: nativeGrant.format_id, maxFrameBytes: nativeGrant.max_frame_bytes)
     }
   }
 

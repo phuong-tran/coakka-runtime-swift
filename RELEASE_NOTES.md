@@ -1,5 +1,13 @@
 # Swift Connector Release Notes
 
+## 2.5.2
+
+- Adds `Codable` File and Stream Lane owner grants with public control-plane
+  construction, exact-owner endpoint pinning, and live owner-aware tests.
+- Documents transfer-scoped File grants and single-admission Stream grants.
+- Keeps all five payloads at native generation
+  `2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a`.
+
 ## 2.5.1
 
 - Corrects public documentation and adopts the file-scoped Apache-2.0 and

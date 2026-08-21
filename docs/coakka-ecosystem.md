@@ -19,14 +19,14 @@ not the whole product surface.
 
 | Channel | Runtime entrypoint | Logger entrypoint |
 | --- | --- | --- |
-| Maven Central | [`coakka.runtime` 2.5.2](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/runtime/2.5.2) | [`coakka.logger` 1.2.2](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/logger/1.2.2) |
-| NuGet | [`CoAkka.Runtime` 2.5.2](https://www.nuget.org/packages/CoAkka.Runtime/2.5.2) | [`CoAkka.Logger` 1.2.3](https://www.nuget.org/packages/CoAkka.Logger/1.2.3) |
-| npm | [`coakka-v2-connector-node` 2.5.2](https://www.npmjs.com/package/coakka-v2-connector-node/v/2.5.2) | [`coakka-logger-node` 1.2.7](https://www.npmjs.com/package/coakka-logger-node/v/1.2.7) |
-| npm (Bun) | [`coakka-v2-connector-bun` 2.5.2](https://www.npmjs.com/package/coakka-v2-connector-bun/v/2.5.2) | [`coakka-logger-bun` 1.2.7](https://www.npmjs.com/package/coakka-logger-bun/v/1.2.7) |
-| npm (Electron) | [`coakka-v2-connector-electron` 2.5.2](https://www.npmjs.com/package/coakka-v2-connector-electron/v/2.5.2) | [`coakka-logger-electron` 1.2.7](https://www.npmjs.com/package/coakka-logger-electron/v/1.2.7) |
-| PyPI | [`coakka-v2-connector` 2.5.2](https://pypi.org/project/coakka-v2-connector/2.5.2/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
-| Go modules | [`coakka-runtime-go` v1.8.2](https://pkg.go.dev/github.com/phuong-tran/coakka-runtime-go@v1.8.2) | [`coakka-logger-go` v1.2.6](https://pkg.go.dev/github.com/phuong-tran/coakka-logger-go@v1.2.6) |
-| SwiftPM | [`coakka-runtime-swift` v2.5.2](https://github.com/phuong-tran/coakka-runtime-swift/tree/v2.5.2) | [`coakka-logger-swift` v1.2.2](https://github.com/phuong-tran/coakka-logger-swift/releases/tag/v1.2.2) |
+| Maven Central | [`coakka.runtime` 2.5.3](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/runtime/2.5.3) | [`coakka.logger` 1.2.2](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/logger/1.2.2) |
+| NuGet | [`CoAkka.Runtime` 2.5.3](https://www.nuget.org/packages/CoAkka.Runtime/2.5.3) | [`CoAkka.Logger` 1.2.3](https://www.nuget.org/packages/CoAkka.Logger/1.2.3) |
+| npm | [`coakka-v2-connector-node` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-node/v/2.5.3) | [`coakka-logger-node` 1.2.7](https://www.npmjs.com/package/coakka-logger-node/v/1.2.7) |
+| npm (Bun) | [`coakka-v2-connector-bun` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-bun/v/2.5.3) | [`coakka-logger-bun` 1.2.7](https://www.npmjs.com/package/coakka-logger-bun/v/1.2.7) |
+| npm (Electron) | [`coakka-v2-connector-electron` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-electron/v/2.5.3) | [`coakka-logger-electron` 1.2.7](https://www.npmjs.com/package/coakka-logger-electron/v/1.2.7) |
+| PyPI | [`coakka-v2-connector` 2.5.3](https://pypi.org/project/coakka-v2-connector/2.5.3/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
+| Go modules | [`coakka-runtime-go` v1.8.3](https://pkg.go.dev/github.com/phuong-tran/coakka-runtime-go@v1.8.3) | [`coakka-logger-go` v1.2.6](https://pkg.go.dev/github.com/phuong-tran/coakka-logger-go@v1.2.6) |
+| SwiftPM | [`coakka-runtime-swift` v2.5.3](https://github.com/phuong-tran/coakka-runtime-swift/tree/v2.5.3) | [`coakka-logger-swift` v1.2.2](https://github.com/phuong-tran/coakka-logger-swift/releases/tag/v1.2.2) |
 | Maven-style tree | JVM runtime, logger, Spring Boot starter, and Quarkus extension artifacts. |
 | GitHub artifact mirror | Native archives, language package mirrors, CLI tools, inspect tools, manifests, and checksums. |
 

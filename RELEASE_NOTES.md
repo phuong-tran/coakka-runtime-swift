@@ -1,12 +1,5 @@
 # Swift Connector Release Notes
 
-## 2.5.3
-
-- Repackages all five native payloads from exact Core generation
-  `2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be`.
-- Preserves Swift APIs and the public C ABI while adopting the Stream Lane
-  cancellation and control-window liveness fix.
-
 ## 2.5.2
 
 - Adds `Codable` File and Stream Lane owner grants with public control-plane

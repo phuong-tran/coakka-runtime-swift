@@ -3,7 +3,6 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-connector_root="$(cd "${swift_root}/.." && pwd)"
 staging_root="${COAKKA_RUNTIME_STAGING_ROOT:-}"
 resource_root="${swift_root}/Sources/CoAkkaRuntime/Resources"
 
@@ -30,11 +29,11 @@ sha256_file() {
 
 expected_digest() {
   case "$1" in
-    macos-aarch64) printf '%s\n' "391d2256bd5276f7b9001ae9afa8900dd82c5d29e2d81bc0edc1949c509dc4c1" ;;
-    linux-aarch64) printf '%s\n' "bf32ebb908cde7ab7eade427356365ad561c1a4222a950d73097ff92329b79c1" ;;
-    linux-x86_64) printf '%s\n' "07b246b97bad301b81cc90bb9d6f02d9ed425227bc302bc4b9039489b60d1727" ;;
-    windows-aarch64) printf '%s\n' "5662cd77be9e5446bf530c7aedbeccd4b22e5a08b3c96acd92825014abba020f" ;;
-    windows-x86_64) printf '%s\n' "45e4832d0a4c05cce36ec2dea9cc3e32695159b6bc8c741fce9d0bee583a938f" ;;
+    macos-aarch64) printf '%s\n' "277d9ff36b017f2eef2e630ac82bb9ba68f112879297e8067521fe665f82368a" ;;
+    linux-aarch64) printf '%s\n' "dedacfa666c398b01e0aefa0bd9f649a6a63722645e5b822252d3e505e7fda43" ;;
+    linux-x86_64) printf '%s\n' "0ce69740cff0a5f7d5b2f002340ecff645c3c82f4f50d6dfdb9fb8a19e90a38b" ;;
+    windows-aarch64) printf '%s\n' "0ee49c59de50dad40fa403ce2f32b59e0da05ab7677bf3d1ca8a9ccfe2f9b545" ;;
+    windows-x86_64) printf '%s\n' "a54e8a43089adf68f9275c83d0a4495bf8deb384c25f993cd13ef42233da573b" ;;
     *) echo "[swift-stage-runtime] unknown platform: $1" >&2; exit 1 ;;
   esac
 }

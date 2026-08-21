@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 swift_root="$(cd "${script_dir}/.." && pwd)"
-package_version="2.5.2"
+package_version="2.5.3"
 archive="${swift_root}/coakka-runtime-swift-${package_version}.tar.gz"
 work_root="$(mktemp -d "${TMPDIR:-/tmp}/coakka-swift-package.XXXXXX")"
 package_root="${work_root}/coakka-runtime-swift-${package_version}"
@@ -67,8 +67,8 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     metadata = json.load(stream)
 
-assert metadata["artifact_version"] == "2.5.2"
-assert metadata["bundled_native_package_version"] == "2.5.0+4b65d0b2256037bf7fc180bfa6df8c41efc1dd6a"
+assert metadata["artifact_version"] == "2.5.3"
+assert metadata["bundled_native_package_version"] == "2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be"
 assert metadata["publisher_signing"] == "absent"
 assert metadata["supported_platforms"] == [
     "macos-aarch64",

@@ -14,12 +14,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify complete source and native inventory
         run: shasum -a 256 --check SHA256SUMS
-      - name: Swift version
-        run: swift --version
+      - name: Swift version and matching native architecture
+        run: |
+          swift --version
+          test "$(uname -m)" = arm64
       - name: Compile exact library product
         run: swift build -c release --product CoAkkaRuntime -Xswiftc -warnings-as-errors
+      - name: Build current regression bundle
+        run: swift build --build-tests -Xswiftc -warnings-as-errors
       - name: Run current source and ownership regressions
-        env:
-          COAKKA_FILE_LANE_RUNTIME_LIB: ${{ github.workspace }}/Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib
-          COAKKA_STREAM_LANE_RUNTIME_LIB: ${{ github.workspace }}/Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib
-        run: swift test -Xswiftc -warnings-as-errors
+        run: |
+          native_fixture="$(swift build --show-bin-path)/coakka-v2-runtime-swift_CoAkkaRuntime.bundle/Resources/macos-aarch64/libcoakka_runtime_v2.dylib"
+          test -f "$native_fixture"
+          export COAKKA_FILE_LANE_RUNTIME_LIB="$native_fixture"
+          export COAKKA_STREAM_LANE_RUNTIME_LIB="$native_fixture"
+          swift test --skip-build -Xswiftc -warnings-as-errors

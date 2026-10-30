@@ -144,7 +144,7 @@ public struct TcpConnectionStrategySpec: Equatable, Sendable {
     public var idleTimeoutMs: UInt64?
 
     public init(
-        mode: TcpConnectionMode = .perExchange,
+        mode: TcpConnectionMode,
         maxConnections: UInt32? = nil,
         maxRequestsPerConnection: UInt64? = nil,
         idleTimeoutMs: UInt64? = nil
@@ -369,10 +369,8 @@ extension RuntimeHost {
         }
     }
 
-    /// Returns the owned structured result of an explicit startup connection apply.
-    ///
-    /// Nil means the caller omitted the startup policy. The immutable copied result is
-    /// safe to read from any thread and remains available after close.
+    /// Native construction does not perform a connection apply. Always nil;
+    /// inspect startupConfig()/tcpConnectionConfig() for accepted constructor truth.
     public func startupTcpConnectionResult() -> TcpConnectionApplyResult? {
         startupConnectionResult
     }
@@ -411,17 +409,13 @@ extension RuntimeHost {
     }
 
     func withTransportLock<T>(_ operation: () throws -> T) rethrows -> T {
-        transportLock.lock()
-        defer { transportLock.unlock() }
+        session.lock.lock()
+        defer { session.lock.unlock() }
         return try operation()
     }
 
     func requireTransportOpen() throws -> OpaquePointer {
-        try throwIfClosed()
-        guard let runtime else {
-            throw RuntimeError.closed
-        }
-        return runtime
+        try session.requireOpenLocked()
     }
 }
 
@@ -612,7 +606,7 @@ private func securityResult(
     )
 }
 
-private func connectionConfig(_ native: coakka_swift_tcp_connection_config_t) -> TcpConnectionConfigSnapshot {
+func connectionConfig(_ native: coakka_swift_tcp_connection_config_t) -> TcpConnectionConfigSnapshot {
     TcpConnectionConfigSnapshot(
         defaultsRevision: native.defaults_revision,
         mode: TcpConnectionMode(rawValue: native.mode),

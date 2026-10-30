@@ -40,7 +40,7 @@ enum RuntimeEnvelopeCodec {
         return envelope
     }
 
-    static func decodeDeadletter(_ data: Data) throws -> RuntimeDeadletter {
+    static func decodeDeadletter(_ data: Data, reasonName: (UInt32) throws -> String) throws -> RuntimeDeadletter {
         var reader = FieldReader(data)
         var original = RuntimeEnvelope()
         var reason: UInt64 = 0
@@ -57,8 +57,11 @@ enum RuntimeEnvelopeCodec {
                 try reader.skip(tag.type)
             }
         }
+        guard let code = UInt32(exactly: reason) else {
+            throw RuntimeError.invalidArgument("deadletter reason exceeds UInt32 representation")
+        }
         return RuntimeDeadletter(
-            reason: reasonName(reason),
+            reasonCode: code, reason: try reasonName(code),
             detail: detail,
             originalMessageID: original.messageID,
             originalSource: original.source,
@@ -66,26 +69,6 @@ enum RuntimeEnvelopeCodec {
         )
     }
 
-    private static func reasonName(_ value: UInt64) -> String {
-        switch value {
-        case 1:
-            return "DEADLETTER_REASON_NO_ACTIVE_SNAPSHOT"
-        case 2:
-            return "DEADLETTER_REASON_ROUTE_MISS"
-        case 3:
-            return "DEADLETTER_REASON_NO_RESPONSIBLE_HOST"
-        case 4:
-            return "DEADLETTER_REASON_QUEUE_REJECTED"
-        case 5:
-            return "DEADLETTER_REASON_LOCAL_HANDOFF_FAILED"
-        case 6:
-            return "DEADLETTER_REASON_DELIVERY_FAILED"
-        case 7:
-            return "DEADLETTER_REASON_REMOTE_SEND_FAILED"
-        default:
-            return "DEADLETTER_REASON_UNSPECIFIED"
-        }
-    }
 }
 
 private struct FieldTag {
@@ -94,11 +77,11 @@ private struct FieldTag {
 }
 
 private struct FieldReader {
-    private let bytes: [UInt8]
+    private let bytes: Data
     private var offset = 0
 
     init(_ data: Data) {
-        bytes = Array(data)
+        bytes = data
     }
 
     mutating func nextTag() throws -> FieldTag? {
@@ -106,6 +89,7 @@ private struct FieldReader {
             return nil
         }
         let value = try readVarintRaw()
+        guard value >> 3 != 0 else { throw RuntimeError.invalidArgument("invalid field tag") }
         return FieldTag(number: Int(value >> 3), type: Int(value & 0x7))
     }
 
@@ -120,8 +104,7 @@ private struct FieldReader {
         guard expected == fieldBytes else {
             throw RuntimeError.invalidArgument("unexpected field type \(expected)")
         }
-        let length = Int(try readVarintRaw())
-        guard length >= 0, offset + length <= bytes.count else {
+        guard let length = Int(exactly: try readVarintRaw()), length <= bytes.count - offset else {
             throw RuntimeError.invalidArgument("truncated field")
         }
         defer {
@@ -131,7 +114,10 @@ private struct FieldReader {
     }
 
     mutating func readString(expected: Int) throws -> String {
-        String(data: try readBytes(expected: expected), encoding: .utf8) ?? ""
+        guard let text = String(data: try readBytes(expected: expected), encoding: .utf8) else {
+            throw RuntimeError.invalidArgument("invalid UTF-8 field")
+        }
+        return text
     }
 
     mutating func skip(_ type: Int) throws {
@@ -140,6 +126,10 @@ private struct FieldReader {
             _ = try readVarintRaw()
         case fieldBytes:
             _ = try readBytes(expected: type)
+        case 1, 5:
+            let size = type == 1 ? 8 : 4
+            guard size <= bytes.count - offset else { throw RuntimeError.invalidArgument("truncated fixed field") }
+            offset += size
         default:
             throw RuntimeError.invalidArgument("unsupported field type \(type)")
         }
@@ -151,6 +141,7 @@ private struct FieldReader {
         while offset < bytes.count {
             let byte = bytes[offset]
             offset += 1
+            guard shift != 63 || byte <= 1 else { throw RuntimeError.invalidArgument("field value is too large") }
             result |= UInt64(byte & 0x7f) << shift
             if byte & 0x80 == 0 {
                 return result

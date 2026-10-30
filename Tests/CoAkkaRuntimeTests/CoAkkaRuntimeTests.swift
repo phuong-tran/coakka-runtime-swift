@@ -39,10 +39,10 @@ final class CoAkkaRuntimeTests: XCTestCase {
                 )
             )
         ) { error in
-            guard case RuntimeError.invalidArgument(let message) = error else {
+            guard case RuntimeError.nativeStatus(let status, _) = error else {
                 return XCTFail("unexpected error: \(error)")
             }
-            XCTAssertEqual(message, "queueCapacity must be greater than zero")
+            XCTAssertEqual(status, -1) // Core rejects generation0; Swift does not mirror queue policy.
         }
     }
 
@@ -63,10 +63,10 @@ final class CoAkkaRuntimeTests: XCTestCase {
                 )
             )
         ) { error in
-            guard case RuntimeError.invalidArgument(let message) = error else {
+            guard case RuntimeError.nativeStatus(let status, _) = error else {
                 return XCTFail("unexpected error: \(error)")
             }
-            XCTAssertEqual(message, "advertiseHost must not be wildcard")
+            XCTAssertEqual(status, -1)
         }
     }
 
@@ -80,7 +80,7 @@ final class CoAkkaRuntimeTests: XCTestCase {
             )
         )
         defer {
-            runtime.close()
+            try? runtime.close()
         }
 
         try runtime.registerTextHandler("svc.echo") { request in
@@ -99,6 +99,7 @@ final class CoAkkaRuntimeTests: XCTestCase {
         XCTAssertEqual(try runtime.runtimeConfig().routeCount, 1)
         XCTAssertEqual(runtime.clientStats().deliveredRequests, 1)
         XCTAssertEqual(runtime.clientStats().matchedResponses, 1)
+        try runtime.close()
     }
 
     func testFileLaneRoundtripCrossesNativeQuantum() throws {

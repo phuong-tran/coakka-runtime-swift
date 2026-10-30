@@ -15,57 +15,20 @@ not the whole product surface.
 | [`coakka-runtime-swift`](https://github.com/phuong-tran/coakka-runtime-swift) | SwiftPM package for CoAkka Runtime. |
 | [`coakka-logger-swift`](https://github.com/phuong-tran/coakka-logger-swift) | SwiftPM package for CoAkka Logger on macOS ARM64. |
 
-## Package-Manager Surfaces
+## Choose a product and version
 
-| Channel | Runtime entrypoint | Logger entrypoint |
-| --- | --- | --- |
-| Maven Central | [`coakka.runtime` 2.5.3](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/runtime/2.5.3) | [`coakka.logger` 1.2.2](https://central.sonatype.com/artifact/io.github.phuong-tran.coakka/logger/1.2.2) |
-| NuGet | [`CoAkka.Runtime` 2.5.3](https://www.nuget.org/packages/CoAkka.Runtime/2.5.3) | [`CoAkka.Logger` 1.2.3](https://www.nuget.org/packages/CoAkka.Logger/1.2.3) |
-| npm | [`coakka-v2-connector-node` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-node/v/2.5.3) | [`coakka-logger-node` 1.2.7](https://www.npmjs.com/package/coakka-logger-node/v/1.2.7) |
-| npm (Bun) | [`coakka-v2-connector-bun` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-bun/v/2.5.3) | [`coakka-logger-bun` 1.2.7](https://www.npmjs.com/package/coakka-logger-bun/v/1.2.7) |
-| npm (Electron) | [`coakka-v2-connector-electron` 2.5.3](https://www.npmjs.com/package/coakka-v2-connector-electron/v/2.5.3) | [`coakka-logger-electron` 1.2.7](https://www.npmjs.com/package/coakka-logger-electron/v/1.2.7) |
-| PyPI | [`coakka-v2-connector` 2.5.3](https://pypi.org/project/coakka-v2-connector/2.5.3/) | [`coakka-logger` 1.2.2](https://pypi.org/project/coakka-logger/1.2.2/) |
-| Go modules | [`coakka-runtime-go` v1.8.3](https://pkg.go.dev/github.com/phuong-tran/coakka-runtime-go@v1.8.3) | [`coakka-logger-go` v1.2.6](https://pkg.go.dev/github.com/phuong-tran/coakka-logger-go@v1.2.6) |
-| SwiftPM | [`coakka-runtime-swift` v2.5.3](https://github.com/phuong-tran/coakka-runtime-swift/tree/v2.5.3) | [`coakka-logger-swift` v1.2.2](https://github.com/phuong-tran/coakka-logger-swift/releases/tag/v1.2.2) |
-| Maven-style tree | JVM runtime, logger, Spring Boot starter, and Quarkus extension artifacts. |
-| GitHub artifact mirror | Native archives, language package mirrors, CLI tools, inspect tools, manifests, and checksums. |
+The [current package ledger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/common/current-packages.md)
+records actual published versions across npm, PyPI, NuGet, Maven, Go and SwiftPM.
+Each product and language channel has its own release status; a package in one
+channel does not publish another.
 
-Rust crates and apt/deb are planned separately. A package-manager lane is only
-current after the package coordinate, public samples, release notes, and
-compatibility matrix agree.
+Start with [the ecosystem guide](https://github.com/phuong-tran/coakka-samples/blob/main/docs/common/ecosystem-overview.md),
+then choose [Runtime](https://github.com/phuong-tran/coakka-samples/blob/main/docs/coakka-runtime/README.md),
+[HTTP Runtime](https://github.com/phuong-tran/coakka-samples/blob/main/docs/coakka-http-runtime/README.md) or
+[Logger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/coakka-logger/README.md).
+The examples and documentation are organized by product.
 
-## What The Pieces Do
-
-CoAkka Runtime gives application code a target-based delivery boundary:
-
-```text
-caller -> target name -> handler -> reply, timeout, or deadletter
-```
-
-CoAkka Logger gives application code a bounded native logging boundary:
-
-```text
-app log event -> bounded native logger -> drain, counters, and pressure evidence
-```
-
-The runtime and logger can be used independently. They are also meant to fit
-together: runtime explains where work went, while logger explains what the host
-emitted and what happened under pressure.
-
-## How To Navigate
-
-Use [`coakka-samples`](https://github.com/phuong-tran/coakka-samples) when
-you want runnable proof. Use
-[`coakka-publish`](https://github.com/phuong-tran/coakka-publish) when you
-need exact versions, checksums, compatibility, release history, or tool
-downloads. Use a language package repo when you already know the host language
-you want to embed.
-
-Important docs:
-
-- [AI-Assisted Integration](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md)
-- [New To CoAkka](https://github.com/phuong-tran/coakka-samples/blob/main/docs/new-to-coakka.md)
-- [How It Works](https://github.com/phuong-tran/coakka-samples/blob/main/docs/how-it-works.md)
-- [Incremental Adoption](https://github.com/phuong-tran/coakka-samples/blob/main/docs/incremental-adoption.md)
-- [Compatibility Matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md)
-- [Package Manager Roadmap](https://github.com/phuong-tran/coakka-publish/blob/main/docs/package-manager-roadmap.md)
+Runtime connects application-owned work across languages and processes.
+HTTP Runtime brings a shared native-backed HTTP engine to language hosts.
+Logger addresses logging cost and keeps its own package versions.
+Each application owns its handlers and business rules.

@@ -33,28 +33,61 @@ public enum StreamLaneSecurityMode: UInt32, Sendable {
   case direct = 0
   case tls, mutualTLS
 }
-/// Side of a retained stream record.
-public enum StreamDirection: UInt32, Sendable {
-  case publish = 1
-  case subscribe = 2
+/// Core-issued record side. Future numeric values are preserved.
+public struct StreamDirection: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let publish = Self(rawValue: UInt32(COAKKA_V2_STREAM_DIRECTION_PUBLISH.rawValue))
+  public static let subscribe = Self(rawValue: UInt32(COAKKA_V2_STREAM_DIRECTION_SUBSCRIBE.rawValue))
 }
-/// Observable lifecycle state for one stream side.
-public enum StreamState: UInt32, Sendable {
-  case prepared = 1
-  case queued, connecting, active, stopping, ended, rejected, failed, canceled
+/// Core-issued lifecycle state, including future numeric values.
+public struct StreamState: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let prepared = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_PREPARED.rawValue))
+  public static let queued = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_QUEUED.rawValue))
+  public static let connecting = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_CONNECTING.rawValue))
+  public static let active = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_ACTIVE.rawValue))
+  public static let stopping = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_STOPPING.rawValue))
+  public static let ended = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_ENDED.rawValue))
+  public static let rejected = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_REJECTED.rawValue))
+  public static let failed = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_FAILED.rawValue))
+  public static let canceled = Self(rawValue: UInt32(COAKKA_V2_STREAM_STATE_CANCELED.rawValue))
 }
-/// Stable terminal outcome reported independently by each peer.
-public enum StreamResult: UInt32, Sendable {
-  case none = 0
-  case ok, notPrepared, tokenMismatch, formatMismatch, frameLimit, networkIO, timeout
-  case queueFull, protocolError, sourceError, consumerError, internalError, canceledByHost
-  case tlsConfigInvalid, tlsHandshakeFailed, peerCertUntrusted, peerCertExpired
-  case peerIdentityMismatch, clientCertRequired
+/// Core-issued result; unknown codes are retained rather than defaulted.
+public struct StreamResult: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let none = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_NONE.rawValue))
+  public static let ok = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_OK.rawValue))
+  public static let notPrepared = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_NOT_PREPARED.rawValue))
+  public static let tokenMismatch = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_TOKEN_MISMATCH.rawValue))
+  public static let formatMismatch = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_FORMAT_MISMATCH.rawValue))
+  public static let frameLimit = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_FRAME_LIMIT.rawValue))
+  public static let networkIO = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_NETWORK_IO.rawValue))
+  public static let timeout = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_TIMEOUT.rawValue))
+  public static let queueFull = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_QUEUE_FULL.rawValue))
+  public static let protocolError = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_PROTOCOL_ERROR.rawValue))
+  public static let sourceError = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_SOURCE_ERROR.rawValue))
+  public static let consumerError = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_CONSUMER_ERROR.rawValue))
+  public static let internalError = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_INTERNAL_ERROR.rawValue))
+  public static let canceledByHost = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_CANCELED_BY_HOST.rawValue))
+  public static let tlsConfigInvalid = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_TLS_CONFIG_INVALID.rawValue))
+  public static let tlsHandshakeFailed = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_TLS_HANDSHAKE_FAILED.rawValue))
+  public static let peerCertUntrusted = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_PEER_CERT_UNTRUSTED.rawValue))
+  public static let peerCertExpired = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_PEER_CERT_EXPIRED.rawValue))
+  public static let peerIdentityMismatch = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_PEER_IDENTITY_MISMATCH.rawValue))
+  public static let clientCertRequired = Self(rawValue: UInt32(COAKKA_V2_STREAM_RESULT_CLIENT_CERT_REQUIRED.rawValue))
 }
-/// Coalesced transport pressure consumed by app-host policy.
-public enum StreamPressureState: UInt32, Sendable {
-  case inactive = 0
-  case flowing, pressured, stalled, recovering
+/// Core-issued coalesced pressure, preserving future numeric states.
+public struct StreamPressureState: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let inactive = Self(rawValue: UInt32(COAKKA_V2_STREAM_PRESSURE_INACTIVE.rawValue))
+  public static let flowing = Self(rawValue: UInt32(COAKKA_V2_STREAM_PRESSURE_FLOWING.rawValue))
+  public static let pressured = Self(rawValue: UInt32(COAKKA_V2_STREAM_PRESSURE_PRESSURED.rawValue))
+  public static let stalled = Self(rawValue: UInt32(COAKKA_V2_STREAM_PRESSURE_STALLED.rawValue))
+  public static let recovering = Self(rawValue: UInt32(COAKKA_V2_STREAM_PRESSURE_RECOVERING.rawValue))
 }
 /// Result of one bounded source callback.
 public enum StreamSourceResult: Sendable {
@@ -79,9 +112,12 @@ public struct StreamFrameMetadata: Sendable {
 }
 
 /// Fills runtime-owned storage. The buffer is valid only during the callback.
-public typealias StreamSource = (UnsafeMutableRawBufferPointer) -> StreamSourceResult
+/// Bound all work/waits; never close the same lane from its callback.
+/// Core worker invocation is outside the caller's actor; captures must be safe to share.
+public typealias StreamSource = @Sendable (UnsafeMutableRawBufferPointer) -> StreamSourceResult
 /// Consumes borrowed bytes. The buffer is valid only during the callback.
-public typealias StreamConsumer = (UnsafeRawBufferPointer, StreamFrameMetadata) ->
+/// Bound all work/waits; never close the same lane from its callback.
+public typealias StreamConsumer = @Sendable (UnsafeRawBufferPointer, StreamFrameMetadata) ->
   StreamConsumerDecision
 
 /// TLS material copied at lane startup. Never log key paths or session tokens.
@@ -120,7 +156,7 @@ public struct StreamLaneConfig: Sendable {
 }
 
 /// Publisher authorization, format contract, frame bound, and source callback.
-public struct StreamPublishSpec {
+public struct StreamPublishSpec: Sendable {
   public var sessionID: String
   public var authorizationToken: String
   public var formatID: UInt64
@@ -139,7 +175,7 @@ public struct StreamPublishSpec {
 }
 
 /// Publisher endpoint, authorization, flow-control window, and consumer callback.
-public struct StreamSubscribeSpec {
+public struct StreamSubscribeSpec: Sendable {
   public var sessionID: String
   public var authorizationToken: String
   public var remoteHost: String
@@ -198,13 +234,8 @@ public struct StreamPublishGrant: Sendable, Codable, CustomStringConvertible {
     let authorizationToken = try values.decode(String.self, forKey: .authorizationToken)
     let formatID = try values.decode(UInt64.self, forKey: .formatID)
     let maxFrameBytes = try values.decode(UInt32.self, forKey: .maxFrameBytes)
-    try owner.validate()
-    try validateVisibleASCII(sessionID, name: "sessionID", maximum: 64)
-    try validateVisibleASCII(authorizationToken, name: "authorizationToken", maximum: 128)
-    guard formatID != 0 else { throw RuntimeError.invalidArgument("formatID must be non-zero") }
-    guard maxFrameBytes != 0, maxFrameBytes <= 4 * 1024 * 1024 else {
-      throw RuntimeError.invalidArgument("maxFrameBytes must be in [1, 4194304]")
-    }
+    // Typed values are not a second admission policy. Core validates them when
+    // used; C-string representation is checked at that actual FFI boundary.
     self.init(
       owner: owner, sessionID: sessionID, authorizationToken: authorizationToken,
       formatID: formatID, maxFrameBytes: maxFrameBytes)
@@ -236,8 +267,24 @@ public struct StreamSessionSnapshot: Sendable {
   public let cancelRequested: Bool
   public let updateSequence, submittedMonoNs, startedMonoNs, updatedMonoNs, terminalMonoNs: UInt64
   public let detail: String
-  public var terminal: Bool { state.rawValue >= StreamState.ended.rawValue }
-  public var succeeded: Bool { state == .ended && result == .ok }
+  /// Core's terminal-transition marker, independent of known state ordinals.
+  public var terminal: Bool { terminalMonoNs != 0 }
+  /// Recognizes the documented successful end; unknown results are not success.
+  public var succeeded: Bool { terminal && state == .ended && result == .ok }
+}
+
+extension StreamSessionSnapshot {
+  init(native n: coakka_swift_stream_session_snapshot_t) {
+    var detail = n.detail
+    self.init(direction: StreamDirection(rawValue: n.direction), state: StreamState(rawValue: n.state),
+      result: StreamResult(rawValue: n.result), formatID: n.format_id,
+      frames: n.frames, bytes: n.bytes, droppedFrames: n.dropped_frames, lastSequence: n.last_sequence,
+      negotiatedMaxFrameBytes: n.negotiated_max_frame_bytes, windowBytes: n.window_bytes,
+      cancelRequested: n.cancel_requested != 0, updateSequence: n.update_sequence,
+      submittedMonoNs: n.submitted_mono_ns, startedMonoNs: n.started_mono_ns,
+      updatedMonoNs: n.updated_mono_ns, terminalMonoNs: n.terminal_mono_ns,
+      detail: streamDetail(&detail))
+  }
 }
 
 /// Copied, policy-neutral transport-pressure observation.
@@ -251,6 +298,20 @@ public struct StreamPressureSnapshot: Sendable {
   public let currentOperationNs, lastOperationNs, totalPressuredNs, maxPressuredNs: UInt64
 }
 
+extension StreamPressureSnapshot {
+  init(native n: coakka_swift_stream_pressure_snapshot_t) {
+    self.init(direction: StreamDirection(rawValue: n.direction), state: StreamPressureState(rawValue: n.state),
+      reasons: StreamPressureReasons(rawValue: n.reason_bits),
+      availableCreditBytes: n.available_credit_bytes, windowCapacityBytes: n.window_capacity_bytes,
+      updateSequence: n.update_sequence, transitionCount: n.transition_count,
+      observedMonoNs: n.observed_mono_ns, stateStartedMonoNs: n.state_started_mono_ns,
+      pressureStartedMonoNs: n.pressure_started_mono_ns, lastProgressMonoNs: n.last_progress_mono_ns,
+      observedDeliveryBps: n.observed_delivery_bps, currentOperationNs: n.current_operation_ns,
+      lastOperationNs: n.last_operation_ns, totalPressuredNs: n.total_pressured_ns,
+      maxPressuredNs: n.max_pressured_ns)
+  }
+}
+
 /// Bounded queue, active-session, terminal, frame, byte, and drop counters.
 public struct StreamLaneStats: Sendable {
   public let capacity, queuedSubscribers, preparedPublishers, activePublishers: Int
@@ -260,47 +321,42 @@ public struct StreamLaneStats: Sendable {
   public let publishedBytes, consumedFrames, consumedBytes, sourceReportedDrops: UInt64
 }
 
-private final class StreamSourceHolder: @unchecked Sendable {
+private final class StreamSourceHolder: Sendable {
   let callback: StreamSource
   init(_ callback: @escaping StreamSource) { self.callback = callback }
 }
-private final class StreamConsumerHolder: @unchecked Sendable {
+private final class StreamConsumerHolder: Sendable {
   let callback: StreamConsumer
   init(_ callback: @escaping StreamConsumer) { self.callback = callback }
 }
 
 private let streamSourceThunk: coakka_swift_stream_source_fn = {
   context, destination, capacity, out in
-  guard let context, let destination, let out, capacity > 0 else { return -1 }
+  guard let context, let destination, let out, capacity > 0 else { return COAKKA_V2_ERR_INVALID_ARG }
   let holder = Unmanaged<StreamSourceHolder>.fromOpaque(context).takeUnretainedValue()
   let result = holder.callback(UnsafeMutableRawBufferPointer(start: destination, count: capacity))
   switch result {
-  case .wouldBlock: return -6
-  case .end: return -7
+  case .wouldBlock: return COAKKA_V2_ERR_WOULD_BLOCK
+  case .end: return COAKKA_V2_ERR_CLOSED
   case .frame(let size, let captured, let dropped, let flags):
-    guard size > 0, size <= capacity else { return -1 }
+    guard size > 0, size <= capacity else { return COAKKA_V2_ERR_INVALID_ARG }
     out.pointee.captured_mono_ns = captured
     out.pointee.dropped_before = dropped
     out.pointee.flags = flags.rawValue
     out.pointee.size = size
-    return 0
+    return COAKKA_V2_OK
   }
 }
 
 private let streamConsumerThunk: coakka_swift_stream_consumer_fn = { context, data, frame in
-  guard let context, let data, let frame, frame.pointee.size > 0 else { return -1 }
+  guard let context, let data, let frame, frame.pointee.size > 0 else { return COAKKA_V2_ERR_INVALID_ARG }
   let holder = Unmanaged<StreamConsumerHolder>.fromOpaque(context).takeUnretainedValue()
   let metadata = StreamFrameMetadata(
     sequence: frame.pointee.sequence,
     capturedMonoNs: frame.pointee.captured_mono_ns, droppedBefore: frame.pointee.dropped_before,
     flags: StreamFrameFlags(rawValue: frame.pointee.flags))
   return holder.callback(UnsafeRawBufferPointer(start: data, count: frame.pointee.size), metadata)
-    == .continue ? 0 : -7
-}
-
-private struct StreamCallbackKey: Hashable {
-  let id: String
-  let direction: StreamDirection
+    == .continue ? COAKKA_V2_OK : COAKKA_V2_ERR_CLOSED
 }
 
 /// Independent native streaming lane with synchronized callback and close ownership.
@@ -312,12 +368,12 @@ public final class StreamLane: @unchecked Sendable {
   private var lane: OpaquePointer?
   private var closing = false
   private var activeCalls = 0
-  private var callbacks: [StreamCallbackKey: UnsafeMutableRawPointer] = [:]
-  private let ownerAware: Bool
-  private init(library: NativeRuntimeLibrary, lane: OpaquePointer, ownerAware: Bool) {
+  private let callbacks: StreamCallbackOwners
+  private init(library: NativeRuntimeLibrary, lane: OpaquePointer,
+    callbacks: StreamCallbackOwners) {
     self.library = library
     self.lane = lane
-    self.ownerAware = ownerAware
+    self.callbacks = callbacks
   }
 
   /// Opens and starts a lane.
@@ -336,32 +392,20 @@ public final class StreamLane: @unchecked Sendable {
     _ config: StreamLaneConfig = StreamLaneConfig(), owner: LaneOwnerConfig,
     runtimeLibPath: String? = nil
   ) throws -> StreamLane {
-    try owner.validate()
     return try openInternal(config, owner: owner, runtimeLibPath: runtimeLibPath)
   }
 
   private static func openInternal(
     _ config: StreamLaneConfig, owner: LaneOwnerConfig?, runtimeLibPath: String?
   ) throws -> StreamLane {
-    let allowed = StreamLaneFlags.publisher.rawValue | StreamLaneFlags.subscriber.rawValue
-    guard !config.flags.isEmpty, config.flags.rawValue & ~allowed == 0, config.capacity <= 64,
-      config.maxFrameBytes <= 4 * 1024 * 1024, config.maxWindowBytes <= 16 * 1024 * 1024,
-      config.sourceRetryMs <= 1_000, config.publisherWorkerCount <= 4,
-      config.subscriberWorkerCount <= 4,
-      [
-        config.pressureAfterMs, config.stalledAfterMs, config.recoveryAfterMs,
-        config.pressureObservationMs,
-      ].allSatisfy({ $0 <= 60_000 }),
-      config.maxFrameBytes == 0 || config.maxWindowBytes == 0
-        || config.maxWindowBytes >= config.maxFrameBytes
-    else { throw RuntimeError.invalidArgument("invalid stream-lane bounds or worker count") }
+    // This signed-to-size_t representation guard is host-owned. Core owns
+    // flags, resource/timing bounds, cross-field law and effective defaults.
+    guard config.capacity >= 0 else { throw RuntimeError.invalidArgument("negative stream-lane capacity") }
     let library = try NativeRuntimeLibrary(path: runtimeNativePath(explicitPath: runtimeLibPath))
     let handle = try library.requireHandle()
-    guard coakka_swift_stream_available(handle) != 0 else {
-      throw RuntimeError.loadFailed("native runtime does not export complete stream-lane ABI")
-    }
+    try requireCoreFeature(handle, query: coakka_swift_stream_available, operation: "query Core stream-lane feature")
     if owner != nil { try requireLaneOwnerGrants(library) }
-    let strings = StreamCStringOwner([
+    let strings = try NativeCStringStorage([
       config.bindHost, config.security?.credentialID ?? "",
       config.security?.caCertificateFile ?? "", config.security?.identityCertificateFile ?? "",
       config.security?.privateKeyFile ?? "", owner?.ownerInstanceID ?? "",
@@ -423,13 +467,17 @@ public final class StreamLane: @unchecked Sendable {
       status = coakka_swift_stream_create(handle, &native, &out)
     }
     try throwIfNativeError(status, operation: "stream_lane_create")
-    guard let out else { throw RuntimeError.nativeStatus(-2, "stream_lane_create") }
-    let start = coakka_swift_stream_start(handle, out)
-    if start != 0 {
-      coakka_swift_stream_destroy(handle, out)
-      try throwIfNativeError(start, operation: "stream_lane_start")
+    let created = try requireCoreOwner(out, operation: "Stream Lane creation")
+    do {
+      var stats = coakka_swift_stream_stats_t()
+      try throwIfNativeError(coakka_swift_stream_stats(handle, created, &stats), operation: "stream_lane_stats")
+      let callbacks = try StreamCallbackOwners(capacity: stats.capacity)
+      try throwIfNativeError(coakka_swift_stream_start(handle, created), operation: "stream_lane_start")
+      return StreamLane(library: library, lane: created, callbacks: callbacks)
+    } catch {
+      coakka_swift_stream_destroy(handle, created)
+      throw error
     }
-    return StreamLane(library: library, lane: out, ownerAware: owner != nil)
   }
 
   /// Publisher port selected when the lane started.
@@ -444,7 +492,8 @@ public final class StreamLane: @unchecked Sendable {
     }
   }
 
-  /// Prepares an authorized publisher and retains its source until `forget` or `close`.
+  /// Prepares an authorized publisher. Its source stays rooted until Core
+  /// replaces/removes the record, successful `forget`, or completed `close`.
   /// - Parameter spec: Session identity, opaque format, frame bound, and bounded source callback.
   public func preparePublish(_ spec: StreamPublishSpec) throws {
     _ = try preparePublishInternal(spec, grantRequested: false)
@@ -452,11 +501,8 @@ public final class StreamLane: @unchecked Sendable {
 
   /// Prepares one publisher and returns a single-admission capability for this replica.
   public func preparePublishGrant(_ spec: StreamPublishSpec) throws -> StreamPublishGrant {
-    guard ownerAware else {
-      throw RuntimeError.invalidArgument("stream lane was not opened with openOwned")
-    }
     guard let grant = try preparePublishInternal(spec, grantRequested: true) else {
-      throw RuntimeError.nativeStatus(-2, "stream_lane_prepare_publish_grant")
+      throw RuntimeError.contractViolation("Core grant projection omitted its accepted value")
     }
     return grant
   }
@@ -464,33 +510,27 @@ public final class StreamLane: @unchecked Sendable {
   private func preparePublishInternal(
     _ spec: StreamPublishSpec, grantRequested: Bool
   ) throws -> StreamPublishGrant? {
-    try validate(spec.sessionID, spec.authorizationToken, spec.maxFrameBytes)
-    return try withLane { h, l in
-      let holder = Unmanaged.passRetained(StreamSourceHolder(spec.source))
-      let pointer = holder.toOpaque()
-      let strings = StreamCStringOwner([spec.sessionID, spec.authorizationToken])
+    let holder = StreamSourceHolder(spec.source)
+    // Even pre-admission refusal must not run captured app deinit beneath a
+    // mutation lock/native borrow. Accepted roots additionally live in the owner.
+    defer { withExtendedLifetime(holder) {} }
+    return try withCallbackMutation { h, l, retired in
+      if grantRequested { try requireLaneOwnerGrants(library) }
+      let strings = try NativeCStringStorage([spec.sessionID, spec.authorizationToken])
+      let pointer = Unmanaged.passUnretained(holder).toOpaque()
       var nativeGrant = coakka_swift_stream_publish_grant_t()
-      do {
+      let status = try callbacks.admit(.init(id: spec.sessionID, direction: .publish), root: holder, call: {
         if grantRequested {
-          try throwIfNativeError(
-            coakka_swift_stream_prepare_publish_grant(
+          return coakka_swift_stream_prepare_publish_grant(
               h, l, strings[0], strings[1], spec.formatID, spec.maxFrameBytes,
-              streamSourceThunk, pointer, &nativeGrant),
-            operation: "stream_lane_prepare_publish_grant")
+              streamSourceThunk, pointer, &nativeGrant)
         } else {
-          try throwIfNativeError(
-            coakka_swift_stream_prepare_publish(
+          return coakka_swift_stream_prepare_publish(
               h, l, strings[0], strings[1],
-              spec.formatID, spec.maxFrameBytes, streamSourceThunk, pointer),
-            operation: "stream_lane_prepare_publish")
+              spec.formatID, spec.maxFrameBytes, streamSourceThunk, pointer)
         }
-      } catch {
-        holder.release()
-        throw error
-      }
-      condition.lock()
-      callbacks[StreamCallbackKey(id: spec.sessionID, direction: .publish)] = pointer
-      condition.unlock()
+      }, presence: { self.presence(h, l, $0) }, retired: &retired)
+      try throwIfNativeError(status, operation: grantRequested ? "stream_lane_prepare_publish_grant" : "stream_lane_prepare_publish")
       guard grantRequested else { return nil }
       var ownerID = nativeGrant.owner.owner_instance_id
       var advertisedHost = nativeGrant.owner.advertised_host
@@ -505,30 +545,22 @@ public final class StreamLane: @unchecked Sendable {
     }
   }
 
-  /// Queues a subscriber and retains its consumer until `forget` or `close`.
+  /// Queues a subscriber. Its consumer stays rooted until Core removes the
+  /// record, successful `forget`, or completed `close`.
   /// - Parameter spec: Endpoint, authorization, opaque format, window, and bounded consumer callback.
   public func subscribe(_ spec: StreamSubscribeSpec) throws {
-    try validate(spec.sessionID, spec.authorizationToken, spec.maxFrameBytes)
-    guard !spec.remoteHost.isEmpty, spec.remotePort > 0 else {
-      throw RuntimeError.invalidArgument("remote host and port are required")
-    }
-    try withLane { h, l in
-      let holder = Unmanaged.passRetained(StreamConsumerHolder(spec.consumer))
-      let pointer = holder.toOpaque()
-      let strings = StreamCStringOwner([spec.sessionID, spec.authorizationToken, spec.remoteHost])
-      do {
-        try throwIfNativeError(
+    let holder = StreamConsumerHolder(spec.consumer)
+    defer { withExtendedLifetime(holder) {} }
+    try withCallbackMutation { h, l, retired in
+      let strings = try NativeCStringStorage([spec.sessionID, spec.authorizationToken, spec.remoteHost])
+      let pointer = Unmanaged.passUnretained(holder).toOpaque()
+      let status = try callbacks.admit(.init(id: spec.sessionID, direction: .subscribe), root: holder, call: {
           coakka_swift_stream_subscribe(
             h, l, strings[0], strings[1],
             strings[2], spec.remotePort, spec.formatID, spec.maxFrameBytes, spec.initialWindowBytes,
-            spec.timeoutMs, streamConsumerThunk, pointer), operation: "stream_lane_subscribe")
-      } catch {
-        holder.release()
-        throw error
-      }
-      condition.lock()
-      callbacks[StreamCallbackKey(id: spec.sessionID, direction: .subscribe)] = pointer
-      condition.unlock()
+            spec.timeoutMs, streamConsumerThunk, pointer)
+      }, presence: { self.presence(h, l, $0) }, retired: &retired)
+      try throwIfNativeError(status, operation: "stream_lane_subscribe")
     }
   }
 
@@ -549,7 +581,8 @@ public final class StreamLane: @unchecked Sendable {
     _ id: String, _ direction: StreamDirection, _ sequence: UInt64,
     _ timeout: UInt32, _ wait: Bool
   ) throws -> StreamSessionSnapshot {
-    try withLane { h, l in
+    try validateCString(id, name: "session ID")
+    return try withLane { h, l in
       var n = coakka_swift_stream_session_snapshot_t()
       let status = id.withCString {
         wait
@@ -557,17 +590,7 @@ public final class StreamLane: @unchecked Sendable {
           : coakka_swift_stream_get_session(h, l, $0, direction.rawValue, &n)
       }
       try throwIfNativeError(status, operation: "stream_lane_session")
-      return StreamSessionSnapshot(
-        direction: StreamDirection(rawValue: n.direction)!,
-        state: StreamState(rawValue: n.state)!, result: StreamResult(rawValue: n.result)!,
-        formatID: n.format_id,
-        frames: n.frames, bytes: n.bytes, droppedFrames: n.dropped_frames,
-        lastSequence: n.last_sequence,
-        negotiatedMaxFrameBytes: n.negotiated_max_frame_bytes, windowBytes: n.window_bytes,
-        cancelRequested: n.cancel_requested != 0, updateSequence: n.update_sequence,
-        submittedMonoNs: n.submitted_mono_ns, startedMonoNs: n.started_mono_ns,
-        updatedMonoNs: n.updated_mono_ns, terminalMonoNs: n.terminal_mono_ns,
-        detail: streamDetail(&n.detail))
+      return StreamSessionSnapshot(native: n)
     }
   }
 
@@ -588,7 +611,8 @@ public final class StreamLane: @unchecked Sendable {
     _ id: String, _ direction: StreamDirection, _ sequence: UInt64,
     _ timeout: UInt32, _ wait: Bool
   ) throws -> StreamPressureSnapshot {
-    try withLane { h, l in
+    try validateCString(id, name: "session ID")
+    return try withLane { h, l in
       var n = coakka_swift_stream_pressure_snapshot_t()
       let status = id.withCString {
         wait
@@ -596,19 +620,7 @@ public final class StreamLane: @unchecked Sendable {
           : coakka_swift_stream_get_pressure(h, l, $0, direction.rawValue, &n)
       }
       try throwIfNativeError(status, operation: "stream_lane_pressure")
-      return StreamPressureSnapshot(
-        direction: StreamDirection(rawValue: n.direction)!,
-        state: StreamPressureState(rawValue: n.state)!,
-        reasons: StreamPressureReasons(rawValue: n.reason_bits),
-        availableCreditBytes: n.available_credit_bytes,
-        windowCapacityBytes: n.window_capacity_bytes,
-        updateSequence: n.update_sequence, transitionCount: n.transition_count,
-        observedMonoNs: n.observed_mono_ns,
-        stateStartedMonoNs: n.state_started_mono_ns,
-        pressureStartedMonoNs: n.pressure_started_mono_ns,
-        lastProgressMonoNs: n.last_progress_mono_ns, observedDeliveryBps: n.observed_delivery_bps,
-        currentOperationNs: n.current_operation_ns, lastOperationNs: n.last_operation_ns,
-        totalPressuredNs: n.total_pressured_ns, maxPressuredNs: n.max_pressured_ns)
+      return StreamPressureSnapshot(native: n)
     }
   }
 
@@ -621,7 +633,8 @@ public final class StreamLane: @unchecked Sendable {
     try control(id, direction, true)
   }
   private func control(_ id: String, _ direction: StreamDirection, _ forget: Bool) throws {
-    try withLane { h, l in
+    try validateCString(id, name: "session ID")
+    try withCallbackMutation { h, l, retired in
       let status = id.withCString {
         forget
           ? coakka_swift_stream_forget(h, l, $0, direction.rawValue)
@@ -629,10 +642,7 @@ public final class StreamLane: @unchecked Sendable {
       }
       try throwIfNativeError(status, operation: "stream_lane_control")
       if forget {
-        condition.lock()
-        let pointer = callbacks.removeValue(forKey: .init(id: id, direction: direction))
-        condition.unlock()
-        if let pointer { releaseCallback(pointer, direction) }
+        callbacks.forget(.init(id: id, direction: direction), retired: &retired)
       }
     }
   }
@@ -676,16 +686,33 @@ public final class StreamLane: @unchecked Sendable {
     condition.lock()
     while activeCalls != 0 { condition.wait() }
     coakka_swift_stream_destroy(h, value)
-    for (key, pointer) in callbacks { releaseCallback(pointer, key.direction) }
-    callbacks.removeAll()
+    let retired = callbacks.detach()
     lane = nil
     condition.broadcast()
     condition.unlock()
+    withExtendedLifetime(retired) {} // App deinit may reenter only outside lock/borrow.
     if status != 0 && status != -7 {
       try throwIfNativeError(status, operation: "stream_lane_stop")
     }
   }
   deinit { try? close() }
+  private func presence(_ h: OpaquePointer, _ l: OpaquePointer, _ key: StreamCallbackKey) -> Int32 {
+    var snapshot = coakka_swift_stream_session_snapshot_t()
+    return key.id.withCString { coakka_swift_stream_get_session(h, l, $0, key.direction.rawValue, &snapshot) }
+  }
+
+  private func withCallbackMutation<T>(
+    _ body: (OpaquePointer, OpaquePointer, inout [AnyObject]) throws -> T
+  ) throws -> T {
+    var retired: [AnyObject] = []
+    retired.reserveCapacity(callbacks.limit + 1)
+    defer { withExtendedLifetime(retired) {} }
+    return try withLane { h, l in
+      condition.lock()
+      defer { condition.unlock() }
+      return try body(h, l, &retired)
+    }
+  }
   private func withLane<T>(_ body: (OpaquePointer, OpaquePointer) throws -> T) throws -> T {
     condition.lock()
     guard !closing, let lane else {
@@ -704,37 +731,8 @@ public final class StreamLane: @unchecked Sendable {
   }
 }
 
-private func validate(_ id: String, _ token: String, _ maxFrame: UInt32) throws {
-  guard !id.isEmpty, id.utf8.count <= 64, !token.isEmpty, token.utf8.count <= 128,
-    maxFrame > 0, maxFrame <= 4 * 1024 * 1024
-  else {
-    throw RuntimeError.invalidArgument("invalid session identity or frame bound")
-  }
-}
-private func releaseCallback(_ pointer: UnsafeMutableRawPointer, _ direction: StreamDirection) {
-  if direction == .publish {
-    Unmanaged<StreamSourceHolder>.fromOpaque(pointer).release()
-  } else {
-    Unmanaged<StreamConsumerHolder>.fromOpaque(pointer).release()
-  }
-}
 private func streamDetail<T>(_ tuple: inout T) -> String {
   withUnsafeBytes(of: &tuple) { raw in
     String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self)
   }
-}
-private final class StreamCStringOwner {
-  private var pointers: [UnsafeMutablePointer<CChar>] = []
-  init(_ values: [String]) {
-    for value in values {
-      let bytes = value.utf8CString
-      let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count)
-      bytes.withUnsafeBufferPointer {
-        pointer.initialize(from: $0.baseAddress!, count: bytes.count)
-      }
-      pointers.append(pointer)
-    }
-  }
-  deinit { for pointer in pointers { pointer.deallocate() } }
-  subscript(_ index: Int) -> UnsafePointer<CChar> { UnsafePointer(pointers[index]) }
 }

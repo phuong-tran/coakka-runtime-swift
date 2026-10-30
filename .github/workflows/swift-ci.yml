@@ -1,20 +1,25 @@
 name: Swift CI
-
 on:
   push:
     branches: [main]
   pull_request:
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Verify complete source and native inventory
+        run: shasum -a 256 --check SHA256SUMS
       - name: Swift version
         run: swift --version
-      - name: Verify native payload
-        run: bash scripts/verify-native-payload.sh
-      - name: Test package
-        run: swift test
-      - name: Run smoke
-        run: swift run CoAkkaRuntimeSmoke
+      - name: Compile exact library product
+        run: swift build -c release --product CoAkkaRuntime -Xswiftc -warnings-as-errors
+      - name: Run current source and ownership regressions
+        env:
+          COAKKA_FILE_LANE_RUNTIME_LIB: ${{ github.workspace }}/Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib
+          COAKKA_STREAM_LANE_RUNTIME_LIB: ${{ github.workspace }}/Sources/CoAkkaRuntime/Resources/macos-aarch64/libcoakka_runtime_v2.dylib
+        run: swift test -Xswiftc -warnings-as-errors

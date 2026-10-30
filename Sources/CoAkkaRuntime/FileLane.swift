@@ -14,23 +14,53 @@ public enum FileLaneSecurityMode: UInt32, Sendable {
   case tls = 1
   case mutualTLS = 2
 }
-/// Side of a retained transfer record.
-public enum FileTransferDirection: UInt32, Sendable {
-  case send = 1
-  case receive = 2
+/// Core-issued side of a retained record. Future raw values are preserved.
+public struct FileTransferDirection: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let send = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_DIRECTION_SEND.rawValue))
+  public static let receive = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_DIRECTION_RECEIVE.rawValue))
 }
-/// Observable file-transfer lifecycle state.
-public enum FileTransferState: UInt32, Sendable {
-  case prepared = 1
-  case queued, connecting, transferring, verifying, completed, paused, rejected, failed, canceled
+/// Core-issued lifecycle state, including future numeric values.
+public struct FileTransferState: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let prepared = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_PREPARED.rawValue))
+  public static let queued = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_QUEUED.rawValue))
+  public static let connecting = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_CONNECTING.rawValue))
+  public static let transferring = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_TRANSFERRING.rawValue))
+  public static let verifying = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_VERIFYING.rawValue))
+  public static let completed = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_COMPLETED.rawValue))
+  public static let paused = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_PAUSED.rawValue))
+  public static let rejected = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_REJECTED.rawValue))
+  public static let failed = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_FAILED.rawValue))
+  public static let canceled = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_STATE_CANCELED.rawValue))
 }
-/// Stable terminal outcome reported independently by each peer.
-public enum FileTransferResult: UInt32, Sendable {
-  case none = 0
-  case ok, notPrepared, tokenMismatch, metadataMismatch, sizeLimit, storageIO, integrityMismatch,
-    networkIO, timeout, queueFull, protocolError, sourceChanged, internalError, canceledByHost,
-    tlsConfigInvalid, tlsHandshakeFailed, peerCertUntrusted, peerCertExpired, peerIdentityMismatch,
-    clientCertRequired
+/// Core-issued result reported independently by each peer; unknown codes remain numeric.
+public struct FileTransferResult: RawRepresentable, Hashable, Sendable {
+  public let rawValue: UInt32
+  public init(rawValue: UInt32) { self.rawValue = rawValue }
+  public static let none = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_NONE.rawValue))
+  public static let ok = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_OK.rawValue))
+  public static let notPrepared = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_NOT_PREPARED.rawValue))
+  public static let tokenMismatch = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_TOKEN_MISMATCH.rawValue))
+  public static let metadataMismatch = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_METADATA_MISMATCH.rawValue))
+  public static let sizeLimit = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_SIZE_LIMIT.rawValue))
+  public static let storageIO = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_STORAGE_IO.rawValue))
+  public static let integrityMismatch = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_INTEGRITY_MISMATCH.rawValue))
+  public static let networkIO = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_NETWORK_IO.rawValue))
+  public static let timeout = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_TIMEOUT.rawValue))
+  public static let queueFull = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_QUEUE_FULL.rawValue))
+  public static let protocolError = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_PROTOCOL_ERROR.rawValue))
+  public static let sourceChanged = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_SOURCE_CHANGED.rawValue))
+  public static let internalError = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_INTERNAL_ERROR.rawValue))
+  public static let canceledByHost = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_CANCELED_BY_HOST.rawValue))
+  public static let tlsConfigInvalid = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_TLS_CONFIG_INVALID.rawValue))
+  public static let tlsHandshakeFailed = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_TLS_HANDSHAKE_FAILED.rawValue))
+  public static let peerCertUntrusted = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_PEER_CERT_UNTRUSTED.rawValue))
+  public static let peerCertExpired = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_PEER_CERT_EXPIRED.rawValue))
+  public static let peerIdentityMismatch = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_PEER_IDENTITY_MISMATCH.rawValue))
+  public static let clientCertRequired = Self(rawValue: UInt32(COAKKA_V2_FILE_TRANSFER_RESULT_CLIENT_CERT_REQUIRED.rawValue))
 }
 
 /// TLS material read at lane startup. Never log key paths or transfer tokens.
@@ -134,9 +164,6 @@ public struct FileReceiveGrant: Sendable, Codable, CustomStringConvertible {
     let authorizationToken = try values.decode(String.self, forKey: .authorizationToken)
     let expectedSize = try values.decode(UInt64.self, forKey: .expectedSize)
     let expectedSHA256 = try values.decode(Data.self, forKey: .expectedSHA256)
-    try owner.validate()
-    try validateVisibleASCII(transferID, name: "transferID", maximum: 64)
-    try validateVisibleASCII(authorizationToken, name: "authorizationToken", maximum: 128)
     guard expectedSHA256.count == 32 else {
       throw RuntimeError.invalidArgument("expectedSHA256 must contain exactly 32 bytes")
     }
@@ -181,8 +208,26 @@ public struct FileTransferSnapshot: Sendable {
   public let updatedMonoNs: UInt64
   public let terminalMonoNs: UInt64
   public let detail: String
-  public var terminal: Bool { state.rawValue >= FileTransferState.completed.rawValue }
-  public var succeeded: Bool { state == .completed && result == .ok }
+  /// Core's terminal-transition marker, not an ordering guess (PAUSED is not terminal).
+  public var terminal: Bool { terminalMonoNs != 0 }
+  /// Recognizes the documented successful completion; unknown results are not success.
+  public var succeeded: Bool { terminal && state == .completed && result == .ok }
+}
+
+extension FileTransferSnapshot {
+  // Pure owned projection shared by the native getter and focused tests.
+  // No borrowed pointer escapes; the fixed detail array is copied as before.
+  init(native n: coakka_swift_file_transfer_snapshot_t) {
+    var detail = n.detail
+    self.init(direction: FileTransferDirection(rawValue: n.direction),
+      state: FileTransferState(rawValue: n.state), result: FileTransferResult(rawValue: n.result),
+      expectedSize: n.expected_size, transferredBytes: n.transferred_bytes,
+      committedOffset: n.committed_offset, progressMilli: n.progress_milli,
+      cancelRequested: n.cancel_requested != 0, updateSequence: n.update_sequence,
+      submittedMonoNs: n.submitted_mono_ns, startedMonoNs: n.started_mono_ns,
+      updatedMonoNs: n.updated_mono_ns, terminalMonoNs: n.terminal_mono_ns,
+      detail: fixedString(&detail))
+  }
 }
 /// Bounded queue, active-work, terminal-count, and completed-byte counters.
 public struct FileLaneStats: Sendable {
@@ -206,11 +251,9 @@ public final class FileLane: @unchecked Sendable {
   private var lane: OpaquePointer?
   private var closing = false
   private var activeCalls = 0
-  private let ownerAware: Bool
-  private init(library: NativeRuntimeLibrary, lane: OpaquePointer, ownerAware: Bool) {
+  private init(library: NativeRuntimeLibrary, lane: OpaquePointer) {
     self.library = library
     self.lane = lane
-    self.ownerAware = ownerAware
   }
   /// Opens and starts a lane, failing when file transfer is unavailable.
   /// - Parameters:
@@ -227,24 +270,20 @@ public final class FileLane: @unchecked Sendable {
     _ config: FileLaneConfig = FileLaneConfig(), owner: LaneOwnerConfig,
     runtimeLibPath: String? = nil
   ) throws -> FileLane {
-    try owner.validate()
     return try openInternal(config, owner: owner, runtimeLibPath: runtimeLibPath)
   }
 
   private static func openInternal(
     _ config: FileLaneConfig, owner: LaneOwnerConfig?, runtimeLibPath: String?
   ) throws -> FileLane {
-    let allowedFlags = FileLaneFlags.sender.rawValue | FileLaneFlags.receiver.rawValue
-    guard !config.flags.isEmpty, config.flags.rawValue & ~allowedFlags == 0,
-      config.senderWorkerCount <= 4, config.receiverWorkerCount <= 4
-    else { throw RuntimeError.invalidArgument("invalid file-lane flags or worker count") }
+    // Swift Int cannot project a negative value into Core's size_t intent.
+    // Flags, worker/resource bounds and defaults are validated by Core.
+    guard config.queueCapacity >= 0 else { throw RuntimeError.invalidArgument("negative file-lane capacity") }
     let library = try NativeRuntimeLibrary(path: runtimeNativePath(explicitPath: runtimeLibPath))
     let handle = try library.requireHandle()
-    guard coakka_swift_file_lane_available(handle) != 0 else {
-      throw RuntimeError.loadFailed("native runtime does not export file-lane ABI")
-    }
+    try requireCoreFeature(handle, query: coakka_swift_file_lane_available, operation: "query Core file-lane feature")
     if owner != nil { try requireLaneOwnerGrants(library) }
-    let strings = CStringOwner([
+    let strings = try NativeCStringStorage([
       config.bindHost, config.security?.credentialID ?? "",
       config.security?.caCertificateFile ?? "", config.security?.identityCertificateFile ?? "",
       config.security?.privateKeyFile ?? "", owner?.ownerInstanceID ?? "",
@@ -301,19 +340,20 @@ public final class FileLane: @unchecked Sendable {
       createStatus = coakka_swift_file_lane_create(handle, &native, &out)
     }
     try throwIfNativeError(createStatus, operation: "file_lane_create")
-    guard let out else { throw RuntimeError.nativeStatus(-2, "file_lane_create") }
-    let start = coakka_swift_file_lane_start(handle, out)
+    let created = try requireCoreOwner(out, operation: "File Lane creation")
+    let start = coakka_swift_file_lane_start(handle, created)
     if start != 0 {
-      coakka_swift_file_lane_destroy(handle, out)
+      coakka_swift_file_lane_destroy(handle, created)
       try throwIfNativeError(start, operation: "file_lane_start")
     }
-    return FileLane(library: library, lane: out, ownerAware: owner != nil)
+    return FileLane(library: library, lane: created)
   }
   /// Computes the exact source identity through the selected core-runtime.
   /// - Parameters:
   ///   - path: Readable regular file to hash.
   ///   - runtimeLibPath: Explicit core-runtime path, or `nil` for connector resolution.
   public static func sha256(path: String, runtimeLibPath: String? = nil) throws -> FileDigest {
+    try validateCString(path, name: "file path")
     let library = try NativeRuntimeLibrary(path: runtimeNativePath(explicitPath: runtimeLibPath))
     let handle = try library.requireHandle()
     var bytes = [UInt8](repeating: 0, count: 32)
@@ -344,7 +384,7 @@ public final class FileLane: @unchecked Sendable {
       throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
     }
     try withLane { h, l in
-      let c = CStringOwner([spec.transferID, spec.authorizationToken, spec.destinationPath])
+      let c = try NativeCStringStorage([spec.transferID, spec.authorizationToken, spec.destinationPath])
       try spec.expectedSHA256.withUnsafeBytes { b in
         try throwIfNativeError(
           coakka_swift_file_lane_prepare_receive(
@@ -356,14 +396,12 @@ public final class FileLane: @unchecked Sendable {
   }
   /// Prepares one receive and returns a capability containing this replica's exact endpoint.
   public func prepareReceiveGrant(_ spec: FileReceiveSpec) throws -> FileReceiveGrant {
-    guard ownerAware else {
-      throw RuntimeError.invalidArgument("file lane was not opened with openOwned")
-    }
     guard spec.expectedSHA256.count == 32 else {
       throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
     }
     return try withLane { h, l in
-      let c = CStringOwner([spec.transferID, spec.authorizationToken, spec.destinationPath])
+      try requireLaneOwnerGrants(library)
+      let c = try NativeCStringStorage([spec.transferID, spec.authorizationToken, spec.destinationPath])
       var grant = coakka_swift_file_receive_grant_t()
       try spec.expectedSHA256.withUnsafeBytes { b in
         try throwIfNativeError(
@@ -389,11 +427,11 @@ public final class FileLane: @unchecked Sendable {
   /// Queues a send after the remote application prepares the receive.
   /// - Parameter spec: Source plus the endpoint and grant returned by the receiver.
   public func submitSend(_ spec: FileSendSpec) throws {
-    guard spec.expectedSHA256.count == 32, spec.remotePort > 0 else {
-      throw RuntimeError.invalidArgument("invalid send spec")
+    guard spec.expectedSHA256.count == 32 else {
+      throw RuntimeError.invalidArgument("expectedSHA256 must contain 32 bytes")
     }
     try withLane { h, l in
-      let c = CStringOwner([
+      let c = try NativeCStringStorage([
         spec.transferID, spec.authorizationToken, spec.remoteHost, spec.sourcePath,
       ])
       try spec.expectedSHA256.withUnsafeBytes { b in
@@ -422,7 +460,8 @@ public final class FileLane: @unchecked Sendable {
   private func read(
     _ id: String, _ d: FileTransferDirection, _ seq: UInt64, _ ms: UInt32, _ wait: Bool
   ) throws -> FileTransferSnapshot {
-    try withLane { h, l in
+    try validateCString(id, name: "transfer ID")
+    return try withLane { h, l in
       var n = coakka_swift_file_transfer_snapshot_t()
       let status = id.withCString {
         wait
@@ -430,20 +469,7 @@ public final class FileLane: @unchecked Sendable {
           : coakka_swift_file_lane_get_transfer(h, l, $0, d.rawValue, &n)
       }
       try throwIfNativeError(status, operation: "file_lane_transfer")
-      var detail = n.detail
-      let text = withUnsafeBytes(of: &detail) { raw -> String in
-        let bytes = raw.prefix { $0 != 0 }
-        return String(decoding: bytes, as: UTF8.self)
-      }
-      return FileTransferSnapshot(
-        direction: FileTransferDirection(rawValue: n.direction)!,
-        state: FileTransferState(rawValue: n.state)!,
-        result: FileTransferResult(rawValue: n.result)!, expectedSize: n.expected_size,
-        transferredBytes: n.transferred_bytes, committedOffset: n.committed_offset,
-        progressMilli: n.progress_milli, cancelRequested: n.cancel_requested != 0,
-        updateSequence: n.update_sequence, submittedMonoNs: n.submitted_mono_ns,
-        startedMonoNs: n.started_mono_ns, updatedMonoNs: n.updated_mono_ns,
-        terminalMonoNs: n.terminal_mono_ns, detail: text)
+      return FileTransferSnapshot(native: n)
     }
   }
   /// Requests cooperative cancellation; observe terminal state before forget.
@@ -455,6 +481,7 @@ public final class FileLane: @unchecked Sendable {
     try control(transferID, direction, true)
   }
   private func control(_ id: String, _ d: FileTransferDirection, _ forget: Bool) throws {
+    try validateCString(id, name: "transfer ID")
     try withLane { h, l in
       try id.withCString {
         try throwIfNativeError(
@@ -522,20 +549,4 @@ public final class FileLane: @unchecked Sendable {
     }
     return try body(try library.requireHandle(), lane)
   }
-}
-
-private final class CStringOwner {
-  private var pointers: [UnsafeMutablePointer<CChar>] = []
-  init(_ values: [String]) {
-    for value in values {
-      let bytes = value.utf8CString
-      let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count)
-      bytes.withUnsafeBufferPointer { source in
-        pointer.initialize(from: source.baseAddress!, count: bytes.count)
-      }
-      pointers.append(pointer)
-    }
-  }
-  deinit { for pointer in pointers { pointer.deallocate() } }
-  subscript(_ index: Int) -> UnsafePointer<CChar> { UnsafePointer(pointers[index]) }
 }

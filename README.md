@@ -1,179 +1,85 @@
-# CoAkka Runtime Swift Connector
+# CoAkka Runtime Swift 3
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/phuong-tran/coakka-samples/main/docs/assets/brand/coakka-logo.png" alt="CoAkka" width="480">
-</p>
+CoAkka Runtime is a polyglot, cross-platform distributed runtime for
+application-owned work, backed by a shared native core. Its Swift connector
+keeps application handlers and business behavior in Swift. This package targets SwiftPM version 3.0.0 over native
+Core 3.0.0/1522b4a9/ABI1. It is a new API baseline after public 2.5.3.
+Use the [current package ledger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/common/current-packages.md) for published availability.
 
-**This is the Swift connector in the polyglot, multi-language, multi-platform
-CoAkka Runtime ecosystem.** CoAkka is not a Swift-only runtime: this package
-adapts Swift applications to the same native core, public C ABI, target,
-request/reply, bounded-admission, and deadletter contract used by C++, the JVM,
-Node.js, Python, Go, C#, Rust, and other connector lanes.
+## Package and build requirements
 
-SwiftPM exposes
-request/reply, local handlers, deadletters, diagnostics, capability discovery,
-connection strategy, and atomic TLS/mTLS credential reload over the public C
-ABI.
+The product is the dynamic SwiftPM library CoAkkaRuntime, backed by a small
+C11 representation bridge and exact packaged native images. No application
+installs a separate Core/provider library or message-codec dependency.
 
-Current source version: `2.5.3`<br>
-Bundled runtime: `2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be`; publisher signing: absent.
-
-The bundled macOS ARM64 dylib is rebuilt from the exact `26f7944de4a4e0598845a54e4775f9463a9e33be` native
-snapshot with deployment target `13.0`. Package verification pins its digest
-and rejects a higher Mach-O minimum OS version.
-
-## Ecosystem
-
-CoAkka is a polyglot native runtime with connectors for
-C++, JVM/Kotlin, Spring Boot, Quarkus, JavaScript/Node/Bun, Python, Go, C#,
-Rust, and Swift. Connector availability and native execution evidence are
-tracked separately so a package file is never presented as proof that its
-target runtime executed.
-
-Kubernetes is supported but not required. The same runtime contract applies to
-standalone hosts, containers, VMs, bare metal, and architecture-matched edge
-deployments. Use the public
-[Ecosystem Overview](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ecosystem-overview.md)
-and [Compatibility Matrix](https://github.com/phuong-tran/coakka-publish/blob/main/docs/compatibility-matrix.md)
-for exact package and native-platform evidence.
-The [package and platform evidence ledger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-package-platform-evidence.md)
-separates payload presence, verification, matching-host execution, and known
-release limitations.
-Start with the [CoAkka Documentation](https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md)
-for concepts, integration paths, operations, and runnable samples.
-
-| Package target | Included native | Package evidence |
-| --- | --- | --- |
-| macOS ARM64 | `libcoakka_runtime_v2.dylib` | Swift tests, request/reply, transport, and TLS reload pass |
-| Linux ARM64 | `libcoakka_runtime_v2.so` | Exact digest, ELF format, and strict C-bridge compilation pass; no Swift toolchain execution claim |
-| Linux x86-64 | `libcoakka_runtime_v2.so` | Exact digest, ELF format, and strict C-bridge compilation pass; no Swift toolchain execution claim |
-| Windows ARM64 | `libcoakka_runtime_v2.dll` | Exact digest and PE format pass; no Swift toolchain execution claim |
-| Windows x86-64 | `libcoakka_runtime_v2.dll` | Exact digest and PE format pass; no Swift toolchain execution claim |
-
-Linux remains the primary deployment target for the runtime ecosystem. The
-Swift package includes both supported CPU architectures for Linux and Windows
-alongside macOS ARM64; a
-platform-specific execution result does not remove another platform from the
-distribution.
-
-## First Run
-
-```sh
-bash scripts/smoke-package.sh
-```
-
-The package resolver uses an explicit path first, then `COAKKA_RUNTIME_LIB`,
-then the legacy `COAKKA_RUNTIME_NATIVE_PATH`, then the bundled native for the
-current OS/architecture.
+Select this exact SwiftPM version:
 
 ```swift
-import CoAkkaRuntime
-
-let capabilities = try RuntimeHost.readRuntimeCapabilities()
-let mode: TcpConnectionMode = capabilities.supports(.tcpBoundedPool)
-    ? .boundedPool
-    : .perExchange
-
-let runtime = try RuntimeHost.start(
-    ConnectorStartSpec(
-        systemName: "orders",
-        nodeID: "orders-swift-1",
-        routes: [.local("svc.orders")],
-        connectionStrategy: TcpConnectionStrategySpec(mode: mode),
-        security: TcpSecuritySpec()
-    )
-)
-defer { runtime.close() }
-
-try runtime.registerTextHandler("svc.orders") { request in
-    "accepted-\(request)"
-}
-
-let response = try runtime.askText(
-    source: "orders-client",
-    target: "svc.orders",
-    payload: "order-42",
-    deliveryHint: .requireLocal
-)
-print(response)
+.package(url: "https://github.com/phuong-tran/coakka-runtime-swift.git", exact: "3.0.0")
 ```
 
-Connection strategy is startup-configured. TLS/mTLS may reload only a newer
-credential generation in the same active security mode; a rejected reload
-keeps the previous immutable TLS context active. See
-[Swift transport configuration](TRANSPORT_CONFIGURATION.md).
+Use product `CoAkkaRuntime` in your application target. Controlled local
+qualification uses an admitted path dependency, separate from normal installs.
 
-## Package Gates
+The manifest/language floor is Swift 6.0. Coherent qualification profiles are
+Apple Swift 6.2 on macOS, Swift 6.0.3 on Linux/Windows x64, and Swift 6.4.1 with
+SwiftPM's native build system on Windows ARM64. These are distinct compiler/SDK profiles; one platform's
+toolchain execution does not prove another. Native targets are macOS 13 ARM64,
+Linux ARM64 glibc 2.35, Linux x64 glibc 2.36, Windows 10 x64 and Windows 11 ARM64.
+The candidate's actual matching-host/minimum-OS record governs support.
 
-```sh
-bash scripts/verify-native-payload.sh
-swift test
-swift run CoAkkaRuntimeSmoke
-swift run CoAkkaRuntimeTransportSmoke
-bash scripts/check-platform-bridge-source.sh
-bash scripts/smoke-consumer.sh
-bash scripts/check-package-readiness.sh
-```
+Windows ARM64 is a preview target for this 3.0.0 wave and has no official
+support claim. Its native payload remains included for evaluation. Use the
+qualified macOS, Linux or Windows x64 profiles for the supported release scope.
 
-These checks verify source, all five exact native payloads, the macOS Swift
-consumer path, and the cross-platform C bridge source boundary. They do not
-turn bridge compilation on Linux or payload inspection on Windows into a Swift
-execution claim.
+## Application ownership
 
-## C Bridge Contract
+Import CoAkkaRuntime, start a host with application identity/routes, register a
+bounded handler and make typed requests. Follow the complete
+[Swift sample](https://github.com/phuong-tran/coakka-samples/tree/main/coakka-runtime/swift)
+for ordinary SwiftPM integration and throwing scoped cleanup.
 
-The Swift package's public C boundary is documented at the declaration site in
-[`coakka_runtime_bridge.h`](Sources/CoAkkaRuntimeC/include/coakka_runtime_bridge.h).
-Every bridge function states its blocking behavior, borrowed and transferred
-ownership, object lifetime, lifecycle restrictions, structured failure path,
-and capability/edition behavior. The bridge performs no hidden serialization;
-`RuntimeHost` supplies the Swift-side locks that keep close, transport apply,
-ticket use, and frame-reader use from racing.
+Core owns configuration defaults, effective settings, capability probes,
+request delivery, deadlines, cancellation, terminal causes and native shutdown.
+Omission selects AUTO execution and MULTIPLEXED connections through Core.
+Omitted queue intent forwards zero for Core normalization. Inspect accepted
+Core facts rather than reporting input preferences as observed behavior.
 
-## Documentation And Support
+Swift owns ARC, Swift task/callback scheduling and representation safety across
+the C boundary. Borrowed native spans do not outlive their Core lease.
+Callbacks retain their required owners until retirement. A failed throwing
+close preserves owners for explicit retry; application cleanup must preserve
+both the operation failure and a close failure.
 
-- [Connection strategies](https://github.com/phuong-tran/coakka-samples/blob/main/docs/connection-strategies.md)
-- [TLS/mTLS](https://github.com/phuong-tran/coakka-samples/blob/main/docs/tls-and-mtls.md)
-- [Common troubleshooting](https://github.com/phuong-tran/coakka-samples/blob/main/docs/troubleshooting.md), including unsigned macOS/Windows artifacts and Linux loader checks
-- [Contact and support](https://github.com/phuong-tran/coakka-samples/blob/main/docs/contact-and-support.md)
-- Issues: https://github.com/phuong-tran/coakka-publish/issues
-- Contact: `gabrielgun1983@gmail.com`
+Core manages request delivery and completion notifications. File and Stream share
+the same typed status/ownership law; unknown numeric Core values remain unknown.
 
-## File Lane
+## Deployment
 
-`FileLane.open(...)` exposes the independent native bulk-transfer lane through
-the C bridge. Native waits are blocking. See the shared
-[file-lane contract](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-file-transfer.md) for ownership and release requirements.
+Deploy the app, dynamic CoAkkaRuntime module, its resource bundle and the
+matching ordinary Swift language runtime closure together. The package resource
+loader selects an owned OS/CPU image and uses application-relative bundle roots;
+it does not rely on an absolute SwiftPM build-tree path. Native-path overrides
+are development fixtures and are absent from installed-consumer qualification.
 
-## Stream Lane
+The qualification uses whole-module size optimization, disabled private
+reflection metadata and linker dead stripping. Required public Swift/C lookup
+names remain available. Private debug/symbol companions stay outside consumer
+packages. Optimized installed apps must execute after moving away from sources.
 
-Version `2.5.3` contains the Stream Lane connector surface over exact native
-generation `2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be`. Keep that pairing intact and follow the public
-[streaming contract](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-streaming.md).
-Replica owners use `FileLane.openOwned`/`StreamLane.openOwned` and
-`prepareReceiveGrant`/`preparePublishGrant`. Grant values are `Codable`; decode
-them only from the authenticated control plane, then call `sendSpec` or
-`subscribeSpec`. See the [owner-grant ONE/ALL sample](https://github.com/phuong-tran/coakka-samples/blob/main/docs/runtime-lane-owner-grants.md).
+## Migration from2.x
 
-## AI-Assisted Integration
+Recompile against3.0.0. Host close is throwing; replace nonthrowing defer
+cleanup with a scope that records both causal failures. Runtime values and
+metadata now project the current typed Core contracts. Update names from the
+current API/sample rather than copying another language's identifiers.
 
-Before generating application code, use the selected connector README together
-with the public [AI-assisted integration guide](https://github.com/phuong-tran/coakka-samples/blob/main/docs/ai-assisted-integration.md).
-It requires an exact package coordinate, platform evidence, the runnable
-language sample, and the feature-specific lifecycle contract. Do not translate
-API identifiers from another language by analogy.
+See [transport configuration](TRANSPORT_CONFIGURATION.md),
+[release controls](RELEASE.md), [release notes](RELEASE_NOTES.md) and the
+[shared documentation](https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md).
 
 ## License
 
-**Free for application use, including commercial and production use.**
-
-Connector source, generated bindings, type declarations, examples, and package
-documentation use the [Apache License, Version 2.0](https://github.com/phuong-tran/coakka-samples/blob/main/LICENSE).
-Bundled Native Core files use the [CoAkka Native Artifact License 1.2](https://github.com/phuong-tran/coakka-samples/blob/main/NATIVE-LICENSE.md).
-Those native terms permit ordinary application and SaaS use but require a
-separate agreement to sell or offer CoAkka itself as managed runtime or
-infrastructure.
-
-See [CoAkka Package Licensing](https://github.com/phuong-tran/coakka-samples/blob/main/docs/package-licensing.md)
-for the file-scope map. The package also carries offline `LICENSE`,
-`NATIVE-LICENSE.md`, `PACKAGE-LICENSE.md`, and `NOTICE` copies.
+Connector source uses Apache2.0; bundled native images use the file-scoped
+CoAkka Native Artifact License1.2. Preserve LICENSE, NOTICE, NATIVE-LICENSE.md
+and PACKAGE-LICENSE.md. Publisher signing is absent.

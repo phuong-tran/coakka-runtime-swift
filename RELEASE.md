@@ -1,36 +1,34 @@
-# Releasing The Swift Connector
+# Swift 3 package release controls
 
-Current source version is `2.5.3`, paired with native
-generation `2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be`; publisher signing is absent.
+Candidate SwiftPM version 3.0.0 uses native Core 3.0.0/1522b4a9/ABI1. Public2.5.3
+and previous qualification packages remain immutable.
 
-The macOS ARM64 payload is rebuilt from exact native source snapshot
-`26f7944de4a4e0598845a54e4775f9463a9e33be` with deployment target `13.0`.
-Its SHA-256 is
-`277d9ff36b017f2eef2e630ac82bb9ba68f112879297e8067521fe665f82368a`.
-All five native payloads remain byte-identical to generation
-`2.5.1+26f7944de4a4e0598845a54e4775f9463a9e33be`.
+The bounded cold producer adopts all25 exact public SDK headers and five native
+images from the admitted Runtime3.0.0 SDK for Core source
+`1522b4a9f30da1039ef8c7d198bbecfc749a2456`/ABI1. Its normalized native
+build input is not shipped as a separate dependency. Reject wrong versions, missing/extra/edited
+SDK/native inputs, links and existing output before package creation.
 
-## Package Verification
+Use a standard SwiftPM dynamic library with C11 and the declared Swift 6
+language floor. Compile and execute coherent compiler/SDK profiles, strict
+source regression, ARC/callback/failure controls, native memory/race diagnostics,
+bounded fuzz, pressure and resource protocols. Qualify each advertised native
+architecture and minimum OS separately; cross-compilation is not runtime proof.
+Windows ARM64 is an evaluation preview without official support in this wave.
+Its included payload has no final3.0.0 matching-host execution claim and is
+outside the supported release qualification scope.
 
-```sh
-swift test
-swift run CoAkkaRuntimeSmoke
-swift run CoAkkaRuntimeTransportSmoke
-bash scripts/verify-native-payload.sh
-bash scripts/check-platform-bridge-source.sh
-bash scripts/smoke-consumer.sh
-bash scripts/check-package-readiness.sh
-```
+Execute actual whole-module/Osize/no-private-reflection/link-stripped consumers,
+deployed with their application-relative resource bundle and Swift language
+runtime closure. Inspect architecture, exports, dynamic imports, privacy,
+legal material and the exact admitted Core 3.0.0 image identities. Keep private
+maps/symbols apart. Historical qualification remains bound to its original
+images and does not qualify these newer native identities.
 
-The package contains the exact macOS ARM64 dylib, both Linux shared objects,
-and both Windows DLLs. All five digests are fixed in the
-verifier. Package presence and source compilation are not Linux/Windows Swift
-execution evidence.
+Canonical guides, exact catalogs and samples must match the candidate. Freeze
+one independently hashed seal before closeout. At a later authorized release,
+verify it, prepare the reviewed public source commit/tag, establish the chosen
+publisher trust and run fresh remote SwiftPM consumers before public selectors.
 
-`xcrun vtool -show-build` must report macOS `minos 13.0` for the bundled
-dylib. Running the package on a newer macOS ARM64 host is not evidence that it
-was executed on macOS 13.
-
-The checks above build and consume a local SwiftPM archive. Package presence
-and bridge compilation are reported separately from native connector execution
-on each target.
+Private packaging does not push source, merge main, tag or publish. Signing
+and notarization are absent unless separately established at release time.

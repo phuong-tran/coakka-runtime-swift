@@ -4,6 +4,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Generated public SDK, sealed by core-abi-manifest.json. Core owns the types. */
+#include "coakka/v2/client.h"
+#include "coakka/v2/control.h"
+#include "coakka/v2/runtime_startup.h"
+#include "coakka/v2/transport.h"
+#include "coakka/v2/utils.h"
+#include "coakka/v2/file_lane.h"
+#include "coakka/v2/stream_lane.h"
+
+/* The fixed-symbol bridge belongs inside the Swift module, not its public
+ * dynamic export surface. Core SDK declarations above retain their own ABI.
+ * PE exports are opt-in and these functions deliberately have no dllexport. */
+#if !defined(_WIN32) && (defined(__GNUC__) || defined(__clang__))
+#pragma GCC visibility push(hidden)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -109,243 +125,48 @@ enum {
 };
 
 typedef struct coakka_swift_runtime_library_t coakka_swift_runtime_library_t;
-typedef struct coakka_swift_runtime_t coakka_swift_runtime_t;
-typedef struct coakka_swift_ask_client_t coakka_swift_ask_client_t;
-typedef struct coakka_swift_ask_ticket_t coakka_swift_ask_ticket_t;
-typedef struct coakka_swift_frame_reader_t coakka_swift_frame_reader_t;
-typedef struct coakka_swift_file_lane_t coakka_swift_file_lane_t;
-typedef struct coakka_swift_stream_lane_t coakka_swift_stream_lane_t;
+typedef coakka_v2_runtime_t coakka_swift_runtime_t;
+typedef coakka_v2_ask_client_t coakka_swift_ask_client_t;
+typedef coakka_v2_ask_ticket_t coakka_swift_ask_ticket_t;
+typedef coakka_v2_file_lane_t coakka_swift_file_lane_t;
+typedef coakka_v2_stream_lane_t coakka_swift_stream_lane_t;
 
-typedef struct coakka_swift_file_lane_security_config_t {
-  size_t struct_size;
-  uint32_t mode;
-  uint32_t reserved;
-  uint64_t credential_generation;
-  const char *credential_id;
-  const char *ca_certificate_file;
-  const char *identity_certificate_file;
-  const char *private_key_file;
-} coakka_swift_file_lane_security_config_t;
+typedef coakka_v2_file_lane_security_config_t coakka_swift_file_lane_security_config_t;
 
-typedef struct coakka_swift_file_lane_config_t {
-  size_t struct_size;
-  uint32_t flags;
-  const char *bind_host;
-  uint16_t bind_port;
-  size_t queue_capacity;
-  uint64_t max_file_size;
-  uint32_t io_timeout_ms;
-  uint64_t checkpoint_bytes;
-  uint64_t progress_bytes;
-  uint32_t progress_interval_ms;
-  uint32_t sender_worker_count;
-  uint32_t receiver_worker_count;
-  const coakka_swift_file_lane_security_config_t *security;
-} coakka_swift_file_lane_config_t;
+typedef coakka_v2_file_lane_config_t coakka_swift_file_lane_config_t;
 
-typedef struct coakka_swift_lane_owner_config_t {
-  size_t struct_size;
-  const char *owner_instance_id;
-  const char *advertised_host;
-} coakka_swift_lane_owner_config_t;
+typedef coakka_v2_lane_owner_config_t coakka_swift_lane_owner_config_t;
 
-typedef struct coakka_swift_lane_owner_endpoint_t {
-  size_t struct_size;
-  uint16_t port;
-  uint16_t reserved;
-  char owner_instance_id[128];
-  char advertised_host[256];
-} coakka_swift_lane_owner_endpoint_t;
+typedef coakka_v2_lane_owner_endpoint_t coakka_swift_lane_owner_endpoint_t;
 
-typedef struct coakka_swift_file_lane_owned_config_t {
-  size_t struct_size;
-  coakka_swift_file_lane_config_t lane;
-  coakka_swift_lane_owner_config_t owner;
-} coakka_swift_file_lane_owned_config_t;
+typedef coakka_v2_file_lane_owned_config_t coakka_swift_file_lane_owned_config_t;
 
-typedef struct coakka_swift_file_receive_grant_t {
-  size_t struct_size;
-  coakka_swift_lane_owner_endpoint_t owner;
-  char transfer_id[65];
-  char authorization_token[129];
-  uint64_t expected_size;
-  uint8_t expected_sha256[32];
-} coakka_swift_file_receive_grant_t;
+typedef coakka_v2_file_receive_grant_t coakka_swift_file_receive_grant_t;
 
-typedef struct coakka_swift_file_transfer_snapshot_t {
-  size_t struct_size;
-  uint32_t direction;
-  uint32_t state;
-  uint32_t result;
-  uint64_t expected_size;
-  uint64_t transferred_bytes;
-  uint64_t committed_offset;
-  uint32_t progress_milli;
-  uint32_t cancel_requested;
-  uint64_t update_sequence;
-  uint64_t submitted_mono_ns;
-  uint64_t started_mono_ns;
-  uint64_t updated_mono_ns;
-  uint64_t terminal_mono_ns;
-  char detail[160];
-} coakka_swift_file_transfer_snapshot_t;
+typedef coakka_v2_file_transfer_snapshot_t coakka_swift_file_transfer_snapshot_t;
 
-typedef struct coakka_swift_file_lane_stats_t {
-  size_t struct_size;
-  size_t queue_capacity;
-  size_t queued_sends;
-  size_t prepared_receives;
-  size_t active_sends;
-  size_t active_receives;
-  size_t retained_records;
-  uint64_t submitted_sends;
-  uint64_t prepared_receive_count;
-  uint64_t completed_sends;
-  uint64_t completed_receives;
-  uint64_t failed_sends;
-  uint64_t failed_receives;
-  uint64_t canceled_transfers;
-  uint64_t completed_send_bytes;
-  uint64_t completed_receive_bytes;
-} coakka_swift_file_lane_stats_t;
+typedef coakka_v2_file_lane_stats_t coakka_swift_file_lane_stats_t;
 
-typedef struct coakka_swift_stream_frame_t {
-  size_t struct_size;
-  uint64_t sequence;
-  uint64_t captured_mono_ns;
-  uint64_t dropped_before;
-  uint32_t flags;
-  size_t size;
-} coakka_swift_stream_frame_t;
+typedef coakka_v2_stream_frame_t coakka_swift_stream_frame_t;
 
-typedef int32_t (*coakka_swift_stream_source_fn)(
-    void *context, uint8_t *destination, size_t capacity,
-    coakka_swift_stream_frame_t *out_frame);
-typedef int32_t (*coakka_swift_stream_consumer_fn)(
-    void *context, const uint8_t *data,
-    const coakka_swift_stream_frame_t *frame);
+typedef coakka_v2_stream_source_next_fn coakka_swift_stream_source_fn;
+typedef coakka_v2_stream_consumer_fn coakka_swift_stream_consumer_fn;
 
-typedef struct coakka_swift_stream_security_config_t {
-  size_t struct_size;
-  uint32_t mode;
-  uint32_t reserved;
-  uint64_t credential_generation;
-  const char *credential_id;
-  const char *ca_certificate_file;
-  const char *identity_certificate_file;
-  const char *private_key_file;
-} coakka_swift_stream_security_config_t;
+typedef coakka_v2_stream_lane_security_config_t coakka_swift_stream_security_config_t;
 
-typedef struct coakka_swift_stream_config_t {
-  size_t struct_size;
-  uint32_t flags;
-  const char *bind_host;
-  uint16_t bind_port;
-  size_t capacity;
-  uint32_t max_frame_bytes;
-  uint32_t max_window_bytes;
-  uint32_t io_timeout_ms;
-  uint32_t source_retry_ms;
-  uint32_t progress_frames;
-  uint32_t progress_interval_ms;
-  uint32_t publisher_worker_count;
-  uint32_t subscriber_worker_count;
-  const coakka_swift_stream_security_config_t *security;
-  uint32_t pressure_after_ms;
-  uint32_t stalled_after_ms;
-  uint32_t recovery_after_ms;
-  uint32_t pressure_observation_ms;
-} coakka_swift_stream_config_t;
+typedef coakka_v2_stream_lane_config_t coakka_swift_stream_config_t;
 
-typedef struct coakka_swift_stream_owned_config_t {
-  size_t struct_size;
-  coakka_swift_stream_config_t lane;
-  coakka_swift_lane_owner_config_t owner;
-} coakka_swift_stream_owned_config_t;
+typedef coakka_v2_stream_lane_owned_config_t coakka_swift_stream_owned_config_t;
 
-typedef struct coakka_swift_stream_publish_grant_t {
-  size_t struct_size;
-  coakka_swift_lane_owner_endpoint_t owner;
-  char session_id[65];
-  char authorization_token[129];
-  uint64_t format_id;
-  uint32_t max_frame_bytes;
-  uint32_t reserved;
-} coakka_swift_stream_publish_grant_t;
+typedef coakka_v2_stream_publish_grant_t coakka_swift_stream_publish_grant_t;
 
-typedef struct coakka_swift_stream_session_snapshot_t {
-  size_t struct_size;
-  uint32_t direction;
-  uint32_t state;
-  uint32_t result;
-  uint64_t format_id;
-  uint64_t frames;
-  uint64_t bytes;
-  uint64_t dropped_frames;
-  uint64_t last_sequence;
-  uint32_t negotiated_max_frame_bytes;
-  uint32_t window_bytes;
-  uint32_t cancel_requested;
-  uint64_t update_sequence;
-  uint64_t submitted_mono_ns;
-  uint64_t started_mono_ns;
-  uint64_t updated_mono_ns;
-  uint64_t terminal_mono_ns;
-  char detail[160];
-} coakka_swift_stream_session_snapshot_t;
+typedef coakka_v2_stream_session_snapshot_t coakka_swift_stream_session_snapshot_t;
 
-typedef struct coakka_swift_stream_pressure_snapshot_t {
-  size_t struct_size;
-  uint32_t direction;
-  uint32_t state;
-  uint32_t reason_bits;
-  uint32_t available_credit_bytes;
-  uint32_t window_capacity_bytes;
-  uint64_t update_sequence;
-  uint64_t transition_count;
-  uint64_t observed_mono_ns;
-  uint64_t state_started_mono_ns;
-  uint64_t pressure_started_mono_ns;
-  uint64_t last_progress_mono_ns;
-  uint64_t observed_delivery_bps;
-  uint64_t current_operation_ns;
-  uint64_t last_operation_ns;
-  uint64_t total_pressured_ns;
-  uint64_t max_pressured_ns;
-} coakka_swift_stream_pressure_snapshot_t;
+typedef coakka_v2_stream_pressure_snapshot_t coakka_swift_stream_pressure_snapshot_t;
 
-typedef struct coakka_swift_stream_stats_t {
-  size_t struct_size;
-  size_t capacity;
-  size_t queued_subscribers;
-  size_t prepared_publishers;
-  size_t active_publishers;
-  size_t active_subscribers;
-  size_t retained_records;
-  uint64_t submitted_subscribers;
-  uint64_t prepared_publisher_count;
-  uint64_t ended_publishers;
-  uint64_t ended_subscribers;
-  uint64_t failed_publishers;
-  uint64_t failed_subscribers;
-  uint64_t canceled_sessions;
-  uint64_t published_frames;
-  uint64_t published_bytes;
-  uint64_t consumed_frames;
-  uint64_t consumed_bytes;
-  uint64_t source_reported_drops;
-} coakka_swift_stream_stats_t;
+typedef coakka_v2_stream_lane_stats_t coakka_swift_stream_stats_t;
 
-typedef struct coakka_swift_host_handles_t {
-    size_t struct_size;
-    uint32_t flags;
-    int request_write_fd;
-    int response_read_fd;
-    int deadletter_read_fd;
-    int control_write_fd;
-    int monitor_read_fd;
-    int delivered_request_read_fd;
-} coakka_swift_host_handles_t;
+typedef coakka_v2_host_handles_t coakka_swift_host_handles_t;
 
 typedef struct coakka_swift_runtime_info_t {
     size_t struct_size;
@@ -368,178 +189,86 @@ typedef struct coakka_swift_runtime_config_view_t {
     size_t route_count;
 } coakka_swift_runtime_config_view_t;
 
-typedef struct coakka_swift_runtime_health_t {
-    size_t struct_size;
-    int runtime_state;
-    uint32_t flags;
-    uint64_t applied_generation;
-} coakka_swift_runtime_health_t;
+typedef coakka_v2_runtime_health_t coakka_swift_runtime_health_t;
 
-typedef struct coakka_swift_runtime_stats_t {
-    size_t struct_size;
-    uint64_t applied_generation;
-    size_t route_count;
-    int runtime_state;
-    size_t ingress_queue_capacity;
-    size_t ingress_queue_depth;
-    size_t ingress_queue_high_watermark;
-    uint64_t queue_rejected_count;
-    uint64_t route_miss_count;
-    uint64_t deadletter_count;
-    uint64_t delivery_failed_count;
-} coakka_swift_runtime_stats_t;
+typedef coakka_v2_runtime_stats_t coakka_swift_runtime_stats_t;
 
-typedef struct coakka_swift_runtime_capabilities_t {
-    size_t struct_size;
-    uint32_t edition;
-    uint32_t license_status;
-    uint64_t compiled_capabilities;
-    uint64_t entitled_capabilities;
-    uint64_t effective_capabilities;
-    uint32_t tcp_connection_defaults_revision;
-    uint32_t reserved;
-} coakka_swift_runtime_capabilities_t;
+typedef coakka_v2_runtime_capability_snapshot_t coakka_swift_runtime_capabilities_t;
 
-typedef struct coakka_swift_tcp_connection_options_t {
-    size_t struct_size;
-    uint64_t fields;
-    uint32_t mode;
-    uint32_t reserved;
-    uint32_t max_connections;
-    uint32_t reserved2;
-    uint64_t max_requests_per_connection;
-    uint64_t idle_timeout_ms;
-} coakka_swift_tcp_connection_options_t;
+typedef coakka_v2_tcp_connection_options_t coakka_swift_tcp_connection_options_t;
 
-typedef struct coakka_swift_tcp_connection_validation_t {
-    size_t struct_size;
-    uint32_t code;
-    uint32_t reserved;
-    uint64_t field;
-    uint64_t minimum_value;
-    uint64_t maximum_value;
-} coakka_swift_tcp_connection_validation_t;
+typedef coakka_v2_tcp_connection_validation_t coakka_swift_tcp_connection_validation_t;
 
-typedef struct coakka_swift_tcp_connection_config_t {
-    size_t struct_size;
-    uint32_t defaults_revision;
-    uint32_t mode;
-    uint64_t applicable_fields;
-    uint64_t explicitly_configured_fields;
-    uint64_t defaulted_fields;
-    uint64_t configurable_fields;
-    uint32_t max_connections;
-    uint32_t reserved;
-    uint64_t max_requests_per_connection;
-    uint64_t idle_timeout_ms;
-} coakka_swift_tcp_connection_config_t;
+typedef coakka_v2_tcp_connection_config_snapshot_t coakka_swift_tcp_connection_config_t;
 
-typedef struct coakka_swift_tcp_connection_apply_result_t {
-    size_t struct_size;
-    int32_t apply_status;
-    uint32_t changed;
-    uint32_t reason;
-    uint32_t runtime_state;
-    coakka_swift_tcp_connection_validation_t validation;
-    coakka_swift_tcp_connection_config_t effective_config;
-} coakka_swift_tcp_connection_apply_result_t;
+typedef coakka_v2_tcp_connection_apply_result_t coakka_swift_tcp_connection_apply_result_t;
 
-typedef struct coakka_swift_tcp_security_options_t {
-    size_t struct_size;
-    uint64_t fields;
-    uint32_t mode;
-    uint32_t credential_source_kind;
-    uint32_t reload_mode;
-    uint32_t reserved;
-    uint64_t credential_generation;
-    const char *credential_id;
-    const char *ca_certificate_file;
-    const char *identity_certificate_file;
-    const char *private_key_file;
-} coakka_swift_tcp_security_options_t;
+typedef coakka_v2_tcp_security_options_t coakka_swift_tcp_security_options_t;
 
-typedef struct coakka_swift_tcp_security_validation_t {
-    size_t struct_size;
-    uint32_t code;
-    uint32_t reserved;
-    uint64_t field;
-} coakka_swift_tcp_security_validation_t;
+typedef coakka_v2_tcp_security_validation_t coakka_swift_tcp_security_validation_t;
 
-typedef struct coakka_swift_tcp_security_config_t {
-    size_t struct_size;
-    uint32_t mode;
-    uint32_t credential_source_kind;
-    uint32_t reload_mode;
-    uint32_t reload_status;
-    uint64_t credential_generation;
-    const char *credential_id;
-} coakka_swift_tcp_security_config_t;
+typedef coakka_v2_tcp_security_config_snapshot_t coakka_swift_tcp_security_config_t;
 
-typedef struct coakka_swift_tcp_security_identity_t {
-    size_t struct_size;
-    uint32_t minimum_protocol_version;
-    uint32_t maximum_protocol_version;
-    uint64_t inbound_verification_flags;
-    uint64_t outbound_verification_flags;
-    int64_t identity_not_before_unix_seconds;
-    int64_t identity_not_after_unix_seconds;
-    char credential_id_value[128];
-    char identity_fingerprint_sha256[65];
-} coakka_swift_tcp_security_identity_t;
+typedef coakka_v2_tcp_security_identity_info_t coakka_swift_tcp_security_identity_t;
 
-typedef struct coakka_swift_tcp_security_info_t {
-    size_t struct_size;
-    coakka_swift_tcp_security_config_t config;
-    coakka_swift_tcp_security_identity_t identity;
-} coakka_swift_tcp_security_info_t;
+typedef coakka_v2_tcp_security_info_t coakka_swift_tcp_security_info_t;
 
-typedef struct coakka_swift_tcp_security_apply_result_t {
-    size_t struct_size;
-    int32_t apply_status;
-    uint32_t changed;
-    uint32_t reason;
-    uint32_t runtime_state;
-    coakka_swift_tcp_security_validation_t validation;
-    coakka_swift_tcp_security_info_t active_security;
-} coakka_swift_tcp_security_apply_result_t;
+typedef coakka_v2_tcp_security_apply_result_t coakka_swift_tcp_security_apply_result_t;
 
-typedef struct coakka_swift_endpoint_spec_t {
-    const char *host;
-    uint16_t port;
-    uint32_t weight;
-    uint32_t flags;
-} coakka_swift_endpoint_spec_t;
+typedef coakka_v2_endpoint_t coakka_swift_endpoint_spec_t;
 
-typedef struct coakka_swift_route_spec_t {
-    const char *target;
-    uint32_t strategy;
-    const char *route_key_hint;
-    uint32_t flags;
-    const coakka_swift_endpoint_spec_t *endpoints;
-    size_t endpoint_count;
-} coakka_swift_route_spec_t;
+typedef coakka_v2_route_t coakka_swift_route_spec_t;
 
-typedef struct coakka_swift_raw_request_spec_t {
-    size_t struct_size;
-    const char *message_id;
-    const char *source;
-    const char *target;
-    const char *reply_to;
-    const uint8_t *payload;
-    size_t payload_len;
-    uint32_t timeout_ms;
-    uint32_t delivery_hint;
-    uint32_t one_way;
-} coakka_swift_raw_request_spec_t;
+typedef coakka_v2_client_raw_request_spec_t coakka_swift_raw_request_spec_t;
 
-typedef struct coakka_swift_raw_reply_spec_t {
-    size_t struct_size;
-    const uint8_t *request_buf;
-    size_t request_len;
-    const char *source;
-    const uint8_t *payload;
-    size_t payload_len;
-} coakka_swift_raw_reply_spec_t;
+typedef coakka_v2_client_raw_reply_spec_t coakka_swift_raw_reply_spec_t;
+
+/* Exact ABI1 projections. Optional groups are synchronous borrows; NULL means
+ * Core default. These records do not implement configuration or OS policy. */
+typedef coakka_v2_startup_execution_options_t coakka_swift_startup_execution_options_t;
+typedef coakka_v2_startup_io_options_t coakka_swift_startup_io_options_t;
+typedef coakka_v2_startup_monitor_options_t coakka_swift_startup_monitor_options_t;
+
+typedef coakka_v2_runtime_startup_options_t coakka_swift_startup_options_t;
+
+typedef coakka_v2_startup_cpu_info_t coakka_swift_startup_cpu_info_t;
+
+typedef coakka_v2_startup_io_info_t coakka_swift_startup_io_info_t;
+
+typedef coakka_v2_runtime_startup_config_t coakka_swift_startup_config_t;
+
+typedef coakka_v2_runtime_delivery_config_t coakka_swift_delivery_config_t;
+
+typedef coakka_v2_request_reader_t coakka_swift_request_reader_t;
+typedef coakka_v2_owned_frame_t coakka_swift_owned_frame_t;
+
+/* Fixed-symbol Core client surface. Runtime lifecycle and one reader's calls
+ * must be serialized. Destroy its reader before stopping Runtime. Each ticket
+ * has one await/cancel/destroy owner; cancellation is not concurrent-safe.
+ * Returned buffers use client_bytes_release; owned frames use frame_release.
+ * Every output record needs its current struct_size. Core status is unchanged. */
+int32_t coakka_swift_runtime_create_native(coakka_swift_runtime_library_t *,
+    const char *, const char *, int, int, const coakka_swift_startup_options_t *,
+    coakka_swift_runtime_t **);
+int32_t coakka_swift_runtime_get_startup_config(coakka_swift_runtime_library_t *,
+    coakka_swift_runtime_t *, coakka_swift_startup_config_t *);
+int32_t coakka_swift_runtime_get_delivery_config(coakka_swift_runtime_library_t *,
+    coakka_swift_runtime_t *, coakka_swift_delivery_config_t *);
+int32_t coakka_swift_runtime_request_reader_create(coakka_swift_runtime_library_t *,
+    coakka_swift_runtime_t *, const coakka_swift_host_handles_t *, coakka_swift_request_reader_t **);
+int32_t coakka_swift_request_reader_read(coakka_swift_runtime_library_t *,
+    coakka_swift_request_reader_t *, uint32_t, coakka_swift_owned_frame_t **);
+const uint8_t *coakka_swift_owned_frame_data(coakka_swift_runtime_library_t *,
+    const coakka_swift_owned_frame_t *);
+size_t coakka_swift_owned_frame_size(coakka_swift_runtime_library_t *,
+    const coakka_swift_owned_frame_t *);
+void coakka_swift_owned_frame_release(coakka_swift_runtime_library_t *, coakka_swift_owned_frame_t *);
+void coakka_swift_request_reader_destroy(coakka_swift_runtime_library_t *, coakka_swift_request_reader_t *);
+void coakka_swift_ask_ticket_cancel(coakka_swift_runtime_library_t *, coakka_swift_ask_ticket_t *);
+int32_t coakka_swift_copy_envelope_payload(coakka_swift_runtime_library_t *, const uint8_t *, size_t,
+    uint32_t, uint8_t **, size_t *);
+int32_t coakka_swift_copy_request_dispatch(coakka_swift_runtime_library_t *, const uint8_t *, size_t,
+    uint8_t **, size_t *, uint8_t **, size_t *, uint32_t *);
 
 /**
  * Common contract for this C bridge.
@@ -587,8 +316,8 @@ int32_t coakka_swift_runtime_get_info(coakka_swift_runtime_library_t *library,
 
 /**
  * Creates a runtime in CREATED state. Names are borrowed only for this call;
- * the runtime copies them. `strict_no_drop` defaults at the Swift layer and
- * `queue_capacity` must be positive. The caller owns the returned runtime and
+ * the runtime copies them. Drop policy and queue capacity are caller intent,
+ * validated by Core. The caller owns the returned runtime and
  * receives NULL on validation/allocation failure.
  */
 coakka_swift_runtime_t *coakka_swift_runtime_create(coakka_swift_runtime_library_t *library,
@@ -629,7 +358,8 @@ int32_t coakka_swift_runtime_get_host_handles(coakka_swift_runtime_library_t *li
  * replaces all descriptor fields with -1. The call is idempotent but must not
  * race readers, writers, frame readers, or ask clients using those lanes.
  */
-void coakka_swift_host_handles_close(coakka_swift_host_handles_t *handles);
+void coakka_swift_host_handles_close(coakka_swift_runtime_library_t *library,
+    coakka_swift_host_handles_t *handles);
 
 /**
  * Starts a CREATED runtime after handles and a control snapshot are installed.
@@ -742,8 +472,13 @@ int32_t coakka_swift_runtime_get_tcp_security_info(
 const char *coakka_swift_transport_apply_reason_name(coakka_swift_runtime_library_t *library,
                                                      uint32_t reason);
 
+/* Core-owned immutable UTF-8, borrowed from the process-retained module.
+ * NULL means no module/inspection; callers must not fabricate a reason name. */
+const char *coakka_swift_deadletter_reason_name(coakka_swift_runtime_library_t *library,
+                                               uint32_t reason);
+
 /**
- * Creates connector-side request/reply matching over exported terminal lanes.
+ * Creates Core-owned request/reply matching over exported terminal lanes.
  * `runtime` and `handles` are borrowed and must outlive the client. Creation
  * may allocate/start reader state and returns NULL on invalid input/failure.
  */
@@ -753,7 +488,7 @@ coakka_swift_ask_client_t *coakka_swift_ask_client_create(coakka_swift_runtime_l
 
 /**
  * Destroys ask matching state after all tickets are destroyed. The call may
- * join connector-side reader work and must not race begin/await operations.
+ * join Core-owned reader work and must not race begin/await operations.
  */
 void coakka_swift_ask_client_destroy(coakka_swift_runtime_library_t *library,
                                      coakka_swift_ask_client_t *client);
@@ -818,36 +553,12 @@ int32_t coakka_swift_build_raw_reply(coakka_swift_runtime_library_t *library,
 void coakka_swift_client_bytes_release(coakka_swift_runtime_library_t *library,
                                        uint8_t *buf);
 
-/**
- * Creates a bounded, non-owning reader over `fd`; `max_frame_size` must be
- * positive. The caller owns the reader and remains responsible for closing the
- * descriptor after reader destruction.
- */
-coakka_swift_frame_reader_t *coakka_swift_frame_reader_create(coakka_swift_runtime_library_t *library,
-                                                              int fd,
-                                                              size_t max_frame_size);
 
-/** Destroys a frame reader without closing its borrowed descriptor. */
-void coakka_swift_frame_reader_destroy(coakka_swift_runtime_library_t *library,
-                                       coakka_swift_frame_reader_t *reader);
-
-/**
- * Attempts one incremental frame read without waiting for future bytes.
- * WOULD_BLOCK means no complete frame is ready. OK transfers `*out_buf` to the
- * caller for release with coakka_swift_frame_release(). Serialize access to a
- * given reader; it owns mutable partial-frame state.
- */
-int32_t coakka_swift_frame_read_try(coakka_swift_runtime_library_t *library,
-                                    coakka_swift_frame_reader_t *reader,
-                                    uint8_t **out_buf,
-                                    size_t *out_len);
-
-/** Releases a frame buffer returned by coakka_swift_frame_read_try(). */
-void coakka_swift_frame_release(coakka_swift_runtime_library_t *library,
-                                uint8_t *buf);
-
-int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library);
-int32_t coakka_swift_lane_owner_grants_available(coakka_swift_runtime_library_t *library);
+/* Compiled Core feature queries. On OK, out_available is exactly0/1; on a
+ * query failure the status is preserved and the output is not a fact.
+ * Creation still owns entitlement, configuration and lifecycle refusal. */
+int32_t coakka_swift_file_lane_available(coakka_swift_runtime_library_t *library, uint32_t *out_available);
+int32_t coakka_swift_lane_owner_grants_available(coakka_swift_runtime_library_t *library, uint32_t *out_available);
 int32_t coakka_swift_file_lane_create(coakka_swift_runtime_library_t *library, const coakka_swift_file_lane_config_t *config, coakka_swift_file_lane_t **out_lane);
 int32_t coakka_swift_file_lane_create_owned(coakka_swift_runtime_library_t *library, const coakka_swift_file_lane_owned_config_t *config, coakka_swift_file_lane_t **out_lane);
 void coakka_swift_file_lane_destroy(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane);
@@ -864,7 +575,7 @@ int32_t coakka_swift_file_lane_forget(coakka_swift_runtime_library_t *library, c
 int32_t coakka_swift_file_lane_get_stats(coakka_swift_runtime_library_t *library, coakka_swift_file_lane_t *lane, coakka_swift_file_lane_stats_t *out_stats);
 int32_t coakka_swift_file_sha256_path(coakka_swift_runtime_library_t *library, const char *path, uint8_t out_sha256[32], uint64_t *out_size);
 
-int32_t coakka_swift_stream_available(coakka_swift_runtime_library_t *library);
+int32_t coakka_swift_stream_available(coakka_swift_runtime_library_t *library, uint32_t *out_available);
 int32_t coakka_swift_stream_create(coakka_swift_runtime_library_t *library,
                                    const coakka_swift_stream_config_t *config,
                                    coakka_swift_stream_lane_t **out_lane);
@@ -924,6 +635,10 @@ int32_t coakka_swift_stream_stats(coakka_swift_runtime_library_t *library,
 
 #ifdef __cplusplus
 }
+#endif
+
+#if !defined(_WIN32) && (defined(__GNUC__) || defined(__clang__))
+#pragma GCC visibility pop
 #endif
 
 #endif

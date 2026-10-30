@@ -16,15 +16,21 @@ public struct RuntimeRouteSpec: Sendable {
     public var target: String
     public var host: String
     public var port: UInt16
+    public var isLocal: Bool
 
-    public init(target: String, host: String = "127.0.0.1", port: UInt16 = 0) {
+    public init(target: String, host: String = "127.0.0.1", port: UInt16 = 0, isLocal: Bool = true) {
         self.target = target
         self.host = host
         self.port = port
+        self.isLocal = isLocal
     }
 
     public static func local(_ target: String, port: UInt16 = 0, host: String = "127.0.0.1") -> RuntimeRouteSpec {
         RuntimeRouteSpec(target: target, host: host, port: port)
+    }
+
+    public static func remote(_ target: String, host: String, port: UInt16) -> RuntimeRouteSpec {
+        RuntimeRouteSpec(target: target, host: host, port: port, isLocal: false)
     }
 }
 
@@ -60,7 +66,7 @@ public struct RuntimeNetworkConfig: Sendable {
             bindHost: bindHost,
             bindPort: bindPort,
             advertiseHost: advertiseHost,
-            advertisePort: advertisePort == 0 ? bindPort : advertisePort
+            advertisePort: advertisePort
         )
     }
 
@@ -79,48 +85,44 @@ public struct RuntimeNetworkConfig: Sendable {
     }
 
     func validate() throws {
-        if mode == .networkNode {
-            guard let bindHost, !bindHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  bindPort > 0 else {
-                throw RuntimeError.invalidArgument("networkNode requires bindHost and bindPort")
-            }
-            guard let advertiseHost,
-                  !advertiseHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  advertisePort > 0 else {
-                throw RuntimeError.invalidArgument("networkNode requires advertiseHost and advertisePort")
-            }
-            guard !["0.0.0.0", "::", "[::]", "::0"].contains(advertiseHost) else {
-                throw RuntimeError.invalidArgument("advertiseHost must not be wildcard")
-            }
-        } else if bindHost != nil || bindPort != 0 || advertiseHost != nil || advertisePort != 0 {
-            throw RuntimeError.invalidArgument("embedded and outboundOnly do not accept a listener")
-        }
+        if let bindHost { try validateCString(bindHost, name: "bindHost") }
+        if let advertiseHost { try validateCString(advertiseHost, name: "advertiseHost") }
     }
+}
+
+public enum RuntimeCpuPolicy: UInt32, Sendable {
+    case auto = 0
+    case single = 1
 }
 
 public struct ConnectorStartSpec: Sendable {
     public var systemName: String
     public var nodeID: String
     public var strictNoDrop: Bool
+    /// Requested ingress bound; zero delegates normalization/default resolution to Core.
     public var queueCapacity: Int32
     public var generation: UInt64
     public var routes: [RuntimeRouteSpec]
-    public var separateDeliveredRequestLane: Bool
     public var connectionStrategy: TcpConnectionStrategySpec?
     public var security: TcpSecuritySpec?
     public var network: RuntimeNetworkConfig
+    public var cpuPolicy: RuntimeCpuPolicy?
+    public var useIoUring: Bool?
+    public var enableMonitor: Bool?
 
     public init(
         systemName: String,
         nodeID: String,
         strictNoDrop: Bool = true,
-        queueCapacity: Int32 = 128,
+        queueCapacity: Int32 = 0,
         generation: UInt64 = 1,
         routes: [RuntimeRouteSpec],
-        separateDeliveredRequestLane: Bool = true,
         connectionStrategy: TcpConnectionStrategySpec? = nil,
         security: TcpSecuritySpec? = nil,
-        network: RuntimeNetworkConfig = .embedded()
+        network: RuntimeNetworkConfig = .embedded(),
+        cpuPolicy: RuntimeCpuPolicy? = nil,
+        useIoUring: Bool? = nil,
+        enableMonitor: Bool? = nil
     ) {
         self.systemName = systemName
         self.nodeID = nodeID
@@ -128,48 +130,21 @@ public struct ConnectorStartSpec: Sendable {
         self.queueCapacity = queueCapacity
         self.generation = generation
         self.routes = routes
-        self.separateDeliveredRequestLane = separateDeliveredRequestLane
         self.connectionStrategy = connectionStrategy
         self.security = security
         self.network = network
+        self.cpuPolicy = cpuPolicy
+        self.useIoUring = useIoUring
+        self.enableMonitor = enableMonitor
     }
 
     func validate() throws {
-        guard !systemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw RuntimeError.invalidArgument("systemName must not be blank")
-        }
-        guard !systemName.utf8.contains(0) else {
-            throw RuntimeError.invalidArgument("systemName must not contain NUL")
-        }
-        guard !nodeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw RuntimeError.invalidArgument("nodeID must not be blank")
-        }
-        guard !nodeID.utf8.contains(0) else {
-            throw RuntimeError.invalidArgument("nodeID must not contain NUL")
-        }
-        guard queueCapacity > 0 else {
-            throw RuntimeError.invalidArgument("queueCapacity must be greater than zero")
-        }
-        guard generation > 0 else {
-            throw RuntimeError.invalidArgument("generation must be greater than zero")
-        }
+        try validateCString(systemName, name: "systemName")
+        try validateCString(nodeID, name: "nodeID")
         try network.validate()
-        guard !routes.isEmpty else {
-            throw RuntimeError.invalidArgument("at least one local route is required")
-        }
         for route in routes {
-            guard !route.target.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw RuntimeError.invalidArgument("route target must not be blank")
-            }
-            guard !route.target.utf8.contains(0) else {
-                throw RuntimeError.invalidArgument("route target must not contain NUL")
-            }
-            guard !route.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw RuntimeError.invalidArgument("route host must not be blank")
-            }
-            guard !route.host.utf8.contains(0) else {
-                throw RuntimeError.invalidArgument("route host must not contain NUL")
-            }
+            try validateCString(route.target, name: "route target")
+            try validateCString(route.host, name: "route host")
         }
     }
 }
@@ -181,8 +156,8 @@ public struct RuntimeRequest: Sendable {
     public var payload: Data
     public var oneWay: Bool
 
-    public func payloadString(encoding: String.Encoding = .utf8) -> String {
-        String(data: payload, encoding: encoding) ?? ""
+    public func payloadString(encoding: String.Encoding = .utf8) -> String? {
+        String(data: payload, encoding: encoding)
     }
 }
 
@@ -193,12 +168,15 @@ public struct RuntimeResponse: Sendable {
     public var target: String
     public var payload: Data
 
-    public func payloadString(encoding: String.Encoding = .utf8) -> String {
-        String(data: payload, encoding: encoding) ?? ""
+    public func payloadString(encoding: String.Encoding = .utf8) -> String? {
+        String(data: payload, encoding: encoding)
     }
 }
 
 public struct RuntimeDeadletter: Sendable {
+    /// Exact Core code, including future values.
+    public var reasonCode: UInt32
+    /// Exact Core name; unknown codes keep Core's unknown label.
     public var reason: String
     public var detail: String
     public var originalMessageID: String
@@ -261,6 +239,10 @@ public enum RuntimeError: Error, CustomStringConvertible, Sendable {
     case deadletter(RuntimeDeadletter)
     case tcpConnectionApply(TcpConnectionApplyResult)
     case tcpSecurityApply(TcpSecurityApplyResult)
+    case resourceLimit(String)
+    case shutdown(String)
+    case contractViolation(String)
+    case nativeCreationRefused(String)
 
     public var description: String {
         switch self {
@@ -284,6 +266,31 @@ public enum RuntimeError: Error, CustomStringConvertible, Sendable {
             return "TCP connection apply failed with status \(result.status.rawValue) (\(result.reasonName))"
         case .tcpSecurityApply(let result):
             return "TCP security apply failed with status \(result.status.rawValue) (\(result.reasonName))"
+        case .resourceLimit(let message), .shutdown(let message), .contractViolation(let message), .nativeCreationRefused(let message):
+            return message
         }
     }
+}
+
+func validateCString(_ value: String, name: String) throws {
+    guard !value.utf8.contains(0) else { throw RuntimeError.invalidArgument("\(name) must not contain NUL") }
+    guard value.utf8.count <= Int(Int32.max) else { throw RuntimeError.invalidArgument("\(name) exceeds native string bounds") }
+}
+
+// Own only the UTF-8 projection borrowed by one synchronous C call. Validate
+// every string before allocating: throwing must not orphan a retained callback
+// or silently truncate Swift input at an embedded NUL. Core owns text policy.
+final class NativeCStringStorage {
+    private var pointers: [UnsafeMutablePointer<CChar>] = []
+    init(_ values: [String]) throws {
+        for value in values { try validateCString(value, name: "native text") }
+        for value in values {
+            let bytes = value.utf8CString
+            let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count)
+            bytes.withUnsafeBufferPointer { pointer.initialize(from: $0.baseAddress!, count: bytes.count) }
+            pointers.append(pointer)
+        }
+    }
+    deinit { for pointer in pointers { pointer.deallocate() } }
+    subscript(_ index: Int) -> UnsafePointer<CChar> { UnsafePointer(pointers[index]) }
 }

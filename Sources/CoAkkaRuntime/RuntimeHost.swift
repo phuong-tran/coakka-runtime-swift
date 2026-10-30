@@ -3,675 +3,260 @@ import Foundation
 
 public final class RuntimeHost: @unchecked Sendable {
     static let expectedABI: UInt32 = 1
-    private static let activeLock = NSLock()
-    nonisolated(unsafe) private static var active = false
-
-    let library: NativeRuntimeLibrary
-    var runtime: OpaquePointer?
-    private var askClient: OpaquePointer?
-    private var hostHandles: coakka_swift_host_handles_t?
-    private var requestReader: RuntimeFrameReader?
-    private let clientLock = NSLock()
-    let transportLock = NSLock()
-    private var handlers: [String: @Sendable (RuntimeRequest) throws -> Data] = [:]
-    private var nextID: UInt64 = 0
-    private var deliveredRequests: UInt64 = 0
-    private var matchedResponses: UInt64 = 0
-    private var matchedDeadletters: UInt64 = 0
-    private var closed = false
-    let startupConnectionResult: TcpConnectionApplyResult?
+    let session: RuntimeSession
+    var library: NativeRuntimeLibrary { session.library }
+    let startupConnectionResult: TcpConnectionApplyResult? = nil
     let startupSecurityResult: TcpSecurityApplyResult?
+    let clientLock = NSLock()
+    private var handlers: [String: Handler] = [:]
+    private var registrationBytes = 0
+    private var dispatchFailures: UInt64 = 0
+    private var lastDispatchFailure: String?
+    // Sole request runner owns this immutable projection. Registrations are
+    // append-only, so a found handler remains valid. Misses are never cached.
+    private struct DispatchProjection {
+        let bytes: Data
+        let target: String
+        let handler: Handler
+    }
+    private var dispatchProjection: DispatchProjection?
+    var nextID: UInt64 = 0
+    var deliveredRequests: UInt64 = 0
+    var matchedResponses: UInt64 = 0
+    var matchedDeadletters: UInt64 = 0
+
+    enum Handler: Sendable {
+        case rich(@Sendable (RuntimeRequest) throws -> Data)
+        case payload(@Sendable (Data) throws -> Data)
+    }
 
     public let runtimeLibPath: String
     public let startSpec: ConnectorStartSpec
 
-    private init(
-        library: NativeRuntimeLibrary,
-        runtime: OpaquePointer,
-        hostHandles: coakka_swift_host_handles_t,
-        startSpec: ConnectorStartSpec,
-        startupConnectionResult: TcpConnectionApplyResult?,
-        startupSecurityResult: TcpSecurityApplyResult?
-    ) {
-        self.library = library
-        self.runtime = runtime
-        self.hostHandles = hostHandles
-        self.runtimeLibPath = library.path
-        self.startSpec = startSpec
-        self.startupConnectionResult = startupConnectionResult
-        self.startupSecurityResult = startupSecurityResult
+    private init(session: RuntimeSession, spec: ConnectorStartSpec, security: TcpSecurityApplyResult?) {
+        self.session = session
+        startSpec = spec
+        runtimeLibPath = session.library.path
+        startupSecurityResult = security
+        session.start { [weak self] data, size in self?.dispatchRequest(data, size: size) }
     }
 
-    deinit {
-        close()
-    }
+    deinit { session.requestRetirement() }
 
-    public static func start(_ startSpec: ConnectorStartSpec, runtimeLibPath: String? = nil) throws -> RuntimeHost {
-        let normalized = startSpec
-        try normalized.validate()
-
-        activeLock.lock()
-        guard !active else {
-            activeLock.unlock()
-            throw RuntimeError.alreadyStarted
-        }
-        active = true
-        activeLock.unlock()
-
+    public static func start(_ spec: ConnectorStartSpec, runtimeLibPath: String? = nil) throws -> RuntimeHost {
+        try spec.validate()
+        let path = try runtimeNativePath(explicitPath: runtimeLibPath)
+        try validateCString(path, name: "runtime library path")
+        let library = try NativeRuntimeLibrary(path: path)
+        let handle = try library.requireHandle()
+        let abi = coakka_swift_runtime_get_abi_version(handle)
+        guard abi == expectedABI else { throw RuntimeError.unsupportedABI(abi) }
+        let runtime = try createNative(library: library, spec: spec)
+        var handles = coakka_swift_host_handles_t()
+        var handlesOwned = false, started = false
+        var client: OpaquePointer?
+        var reader: OpaquePointer?
         do {
-            let path = try runtimeNativePath(explicitPath: runtimeLibPath)
-            let library = try NativeRuntimeLibrary(path: path)
-            let handle = try library.requireHandle()
-            let abi = coakka_swift_runtime_get_abi_version(handle)
-            guard abi == expectedABI else {
-                throw RuntimeError.unsupportedABI(abi)
+            try applyNetwork(library: library, runtime: runtime, network: spec.network)
+            var security: TcpSecurityApplyResult?
+            if let intent = spec.security {
+                let result = try applySecurity(library: library, runtime: runtime, spec: intent)
+                guard result.applied else { throw RuntimeError.tcpSecurityApply(result) }
+                security = result
             }
-
-            let runtime = try normalized.systemName.withCString { systemName in
-                try normalized.nodeID.withCString { nodeID in
-                    guard let runtime = coakka_swift_runtime_create(
-                        handle,
-                        systemName,
-                        nodeID,
-                        normalized.strictNoDrop ? 1 : 0,
-                        normalized.queueCapacity
-                    ) else {
-                        throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create runtime")
-                    }
-                    return runtime
-                }
-            }
-
-            var handles = emptyHostHandles()
-            var handlesOwned = false
-            var runtimeStartAttempted = false
-            var nativeAskClient: OpaquePointer?
-            var startupConnectionResult: TcpConnectionApplyResult?
-            var startupSecurityResult: TcpSecurityApplyResult?
-
-            do {
-                try applyNetwork(library: library, runtime: runtime, network: normalized.network)
-                if let connectionStrategy = normalized.connectionStrategy {
-                    let result = try applyConnection(
-                        library: library,
-                        runtime: runtime,
-                        spec: connectionStrategy
-                    )
-                    startupConnectionResult = result
-                    guard result.applied else {
-                        throw RuntimeError.tcpConnectionApply(result)
-                    }
-                }
-                if let security = normalized.security {
-                    let result = try applySecurity(library: library, runtime: runtime, spec: security)
-                    startupSecurityResult = result
-                    guard result.applied else {
-                        throw RuntimeError.tcpSecurityApply(result)
-                    }
-                }
-
-                try applyRoutes(
-                    library: library,
-                    runtime: runtime,
-                    generation: normalized.generation,
-                    routes: normalized.routes
-                )
-                let flags = normalized.separateDeliveredRequestLane
-                    ? UInt32(COAKKA_SWIFT_HOST_SEPARATE_DELIVERED_REQUEST_LANE)
-                    : 0
-                try throwIfNativeError(
-                    coakka_swift_runtime_get_host_handles(handle, runtime, flags, &handles),
-                    operation: "get runtime host handles"
-                )
-                handlesOwned = true
-                runtimeStartAttempted = true
-                try throwIfNativeError(coakka_swift_runtime_start(handle, runtime), operation: "start runtime")
-                guard let askClient = coakka_swift_ask_client_create(handle, runtime, &handles) else {
-                    throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "create ask client")
-                }
-                nativeAskClient = askClient
-            } catch {
-                if let nativeAskClient {
-                    coakka_swift_ask_client_destroy(handle, nativeAskClient)
-                }
-                if runtimeStartAttempted {
-                    _ = coakka_swift_runtime_stop(handle, runtime)
-                }
-                if handlesOwned {
-                    coakka_swift_host_handles_close(&handles)
-                }
-                coakka_swift_runtime_destroy(handle, runtime)
-                library.close()
-                throw error
-            }
-
-            let host = RuntimeHost(
-                library: library,
-                runtime: runtime,
-                hostHandles: handles,
-                startSpec: normalized,
-                startupConnectionResult: startupConnectionResult,
-                startupSecurityResult: startupSecurityResult
-            )
-            host.askClient = nativeAskClient
-            do {
-                try host.startReaders(handles: handles)
-                return host
-            } catch {
-                host.close()
-                throw error
-            }
+            try applyRoutes(library: library, runtime: runtime, generation: spec.generation, routes: spec.routes)
+            // Native Core selects its request lane. No descriptor-based inference.
+            try throwIfNativeError(coakka_swift_runtime_get_host_handles(handle, runtime, 0, &handles), operation: "get host handles")
+            handlesOwned = true
+            try throwIfNativeError(coakka_swift_runtime_start(handle, runtime), operation: "start runtime")
+            started = true
+            client = coakka_swift_ask_client_create(handle, runtime, &handles)
+            guard let client else { throw RuntimeError.nativeCreationRefused("Core refused ask-client construction without a causal status") }
+            try throwIfNativeError(coakka_swift_runtime_request_reader_create(handle, runtime, &handles, &reader), operation: "create request reader")
+            guard let reader else { throw RuntimeError.contractViolation("Core returned success without a reader") }
+            return RuntimeHost(session: RuntimeSession(library: library, handle: handle, runtime: runtime,
+                client: client, handles: handles, reader: reader), spec: spec, security: security)
         } catch {
-            activeLock.lock()
-            active = false
-            activeLock.unlock()
+            if let reader { coakka_swift_request_reader_destroy(handle, reader) }
+            if started { _ = coakka_swift_runtime_stop(handle, runtime) }
+            if let client { coakka_swift_ask_client_destroy(handle, client) }
+            if handlesOwned { coakka_swift_host_handles_close(handle, &handles) }
+            coakka_swift_runtime_destroy(handle, runtime)
+            library.close()
             throw error
         }
     }
 
-    public static func startLocal(
-        systemName: String,
-        target: String,
-        nodeID: String? = nil,
-        queueCapacity: Int32 = 128,
-        generation: UInt64 = 1,
-        runtimeLibPath: String? = nil
-    ) throws -> RuntimeHost {
-        try start(
-            ConnectorStartSpec(
-                systemName: systemName,
-                nodeID: nodeID ?? "\(systemName)-swift",
-                queueCapacity: queueCapacity,
-                generation: generation,
-                routes: [.local(target)]
-            ),
-            runtimeLibPath: runtimeLibPath
-        )
+    /// Omitted queue intent forwards zero; Core's startup snapshot reports the accepted bound.
+    public static func startLocal(systemName: String, target: String, nodeID: String? = nil,
+        queueCapacity: Int32 = 0, generation: UInt64 = 1, runtimeLibPath: String? = nil) throws -> RuntimeHost {
+        try start(ConnectorStartSpec(systemName: systemName, nodeID: nodeID ?? "\(systemName)-swift",
+            queueCapacity: queueCapacity, generation: generation, routes: [.local(target)]), runtimeLibPath: runtimeLibPath)
     }
 
     public func registerHandler(_ target: String, handler: @escaping @Sendable (RuntimeRequest) throws -> Data) throws {
-        try throwIfClosed()
-        guard !target.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw RuntimeError.invalidArgument("handler target must not be blank")
-        }
-        clientLock.lock()
-        defer {
-            clientLock.unlock()
-        }
-        guard handlers[target] == nil else {
-            throw RuntimeError.invalidArgument("handler already registered for target \(target)")
-        }
-        handlers[target] = handler
+        try register(target, .rich(handler))
+    }
+
+    public func registerPayloadHandler(_ target: String, handler: @escaping @Sendable (Data) throws -> Data) throws {
+        try register(target, .payload(handler))
     }
 
     public func registerTextHandler(_ target: String, handler: @escaping @Sendable (String) throws -> String) throws {
-        try registerHandler(target) { request in
-            Data(try handler(request.payloadString()).utf8)
+        try registerPayloadHandler(target) { payload in
+            guard let text = String(data: payload, encoding: .utf8) else {
+                throw RuntimeError.invalidArgument("request payload is not UTF-8")
+            }
+            return Data(try handler(text).utf8)
         }
     }
 
-    public func ask(
-        source: String,
-        target: String,
-        payload: Data,
-        timeoutMs: UInt32 = 5_000,
-        deliveryHint: DeliveryHint = .routerDefault
-    ) throws -> RuntimeResponse {
-        try throwIfClosed()
-        let messageID = nextMessageID(source: source)
-        let replyTo = "\(source)/replies"
-        let request = try buildRawRequest(
-            messageID: messageID,
-            source: source,
-            target: target,
-            replyTo: replyTo,
-            payload: payload,
-            timeoutMs: timeoutMs,
-            deliveryHint: deliveryHint
-        )
-
-        let handle = try library.requireHandle()
-        guard let askClient else {
-            throw RuntimeError.closed
+    private func register(_ target: String, _ handler: Handler) throws {
+        try validateCString(target, name: "handler target")
+        guard !target.isEmpty else { throw RuntimeError.invalidArgument("handler target is empty") }
+        try session.withOpen { _ in
+            clientLock.lock()
+            defer { clientLock.unlock() }
+            guard handlers[target] == nil else { throw RuntimeError.invalidArgument("handler target already registered") }
+            let size = target.utf8.count
+            guard handlers.count < 256, size <= 64 * 1024 - registrationBytes else {
+                throw RuntimeError.resourceLimit("handler registration budget exhausted")
+            }
+            handlers[target] = handler
+            registrationBytes += size
         }
-        var ticket: OpaquePointer?
-        try request.withUnsafeBytes { bytes in
-            let pointer = bytes.bindMemory(to: UInt8.self).baseAddress
-            try throwIfNativeError(
-                coakka_swift_ask_client_begin(handle, askClient, pointer, request.count, &ticket),
-                operation: "begin ask"
-            )
-        }
-        guard let ticket else {
-            throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "begin ask")
-        }
-        defer {
-            coakka_swift_ask_ticket_destroy(handle, ticket)
-        }
-
-        var resultKind: UInt32 = 0
-        var resultBuffer: UnsafeMutablePointer<UInt8>?
-        var resultLength = 0
-        let status = coakka_swift_ask_ticket_await(handle, ticket, timeoutMs, &resultKind, &resultBuffer, &resultLength)
-        if status == Int32(COAKKA_SWIFT_STATUS_WOULD_BLOCK) {
-            throw RuntimeError.timeout(messageID)
-        }
-        try throwIfNativeError(status, operation: "await ask response")
-        guard let resultBuffer else {
-            throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "await ask response")
-        }
-        let resultData = Data(bytes: resultBuffer, count: resultLength)
-        coakka_swift_client_bytes_release(handle, resultBuffer)
-
-        if resultKind == UInt32(COAKKA_SWIFT_CLIENT_RESULT_DEADLETTER) {
-            incrementMatchedDeadletters()
-            throw RuntimeError.deadletter(try RuntimeEnvelopeCodec.decodeDeadletter(resultData))
-        }
-        guard resultKind == UInt32(COAKKA_SWIFT_CLIENT_RESULT_RESPONSE) else {
-            throw RuntimeError.nativeStatus(Int32(resultKind), "await ask response")
-        }
-        incrementMatchedResponses()
-        let envelope = try RuntimeEnvelopeCodec.decodeEnvelope(resultData)
-        return RuntimeResponse(
-            messageID: envelope.messageID,
-            correlationID: envelope.correlationID,
-            source: envelope.source,
-            target: envelope.target,
-            payload: envelope.payload
-        )
     }
 
-    public func askText(
-        source: String,
-        target: String,
-        payload: String,
-        timeoutMs: UInt32 = 5_000,
-        deliveryHint: DeliveryHint = .routerDefault
-    ) throws -> String {
-        try ask(
-            source: source,
-            target: target,
-            payload: Data(payload.utf8),
-            timeoutMs: timeoutMs,
-            deliveryHint: deliveryHint
-        ).payloadString()
-    }
+    /// A failed join preserves owners and can be retried. Reentrant handler close
+    /// refuses before sealing admission. Timeout/cancel never promises remote undo.
+    public func close() throws { try session.close() }
 
-    public func runtimeInfo() throws -> RuntimeInfoSnapshot {
-        try throwIfClosed()
-        let handle = try library.requireHandle()
-        var info = coakka_swift_runtime_info_t()
-        try throwIfNativeError(coakka_swift_runtime_get_info(handle, &info), operation: "read runtime info")
-        return RuntimeInfoSnapshot(
-            abiVersion: info.abi_version,
-            featureFlags: info.feature_flags,
-            runtimeVersion: nativeString(info.runtime_version),
-            gitCommit: nativeString(info.git_commit),
-            backend: nativeString(info.backend)
-        )
-    }
-
-    public func runtimeConfig() throws -> RuntimeConfigSnapshot {
-        try throwIfClosed()
-        let handle = try library.requireHandle()
-        guard let runtime else {
-            throw RuntimeError.closed
-        }
-        var config = coakka_swift_runtime_config_view_t()
-        try throwIfNativeError(coakka_swift_runtime_get_config(handle, runtime, &config), operation: "read runtime config")
-        return RuntimeConfigSnapshot(
-            systemName: nativeString(config.system_name),
-            nodeID: nativeString(config.node_id),
-            strictNoDrop: config.strict_no_drop != 0,
-            queueCapacity: config.queue_capacity,
-            runtimeState: toRuntimeState(config.runtime_state),
-            snapshotPresent: config.snapshot_present != 0,
-            appliedGeneration: config.applied_generation,
-            routeCount: config.route_count
-        )
-    }
-
-    public func health() throws -> RuntimeHealthSnapshot {
-        try throwIfClosed()
-        let handle = try library.requireHandle()
-        guard let runtime else {
-            throw RuntimeError.closed
-        }
-        var health = coakka_swift_runtime_health_t()
-        try throwIfNativeError(coakka_swift_runtime_get_health(handle, runtime, &health), operation: "read runtime health")
-        return RuntimeHealthSnapshot(
-            runtimeState: toRuntimeState(health.runtime_state),
-            flags: health.flags,
-            appliedGeneration: health.applied_generation
-        )
-    }
-
-    public func stats() throws -> RuntimeStatsSnapshot {
-        try throwIfClosed()
-        let handle = try library.requireHandle()
-        guard let runtime else {
-            throw RuntimeError.closed
-        }
-        var stats = coakka_swift_runtime_stats_t()
-        try throwIfNativeError(coakka_swift_runtime_get_stats(handle, runtime, &stats), operation: "read runtime stats")
-        return RuntimeStatsSnapshot(
-            appliedGeneration: stats.applied_generation,
-            routeCount: stats.route_count,
-            runtimeState: toRuntimeState(stats.runtime_state),
-            ingressQueueCapacity: stats.ingress_queue_capacity,
-            ingressQueueDepth: stats.ingress_queue_depth,
-            ingressQueueHighWatermark: stats.ingress_queue_high_watermark,
-            queueRejectedCount: stats.queue_rejected_count,
-            routeMissCount: stats.route_miss_count,
-            deadletterCount: stats.deadletter_count,
-            deliveryFailedCount: stats.delivery_failed_count
-        )
+    /// Managed dispatch diagnostics, not inferred native state. Reader failure is
+    /// the exact Core status or a violated FFI contract, never guessed native state.
+    public func dispatchDiagnostics() -> (failures: UInt64, lastError: String?, readerError: RuntimeError?) {
+        clientLock.lock()
+        let value = (dispatchFailures, lastDispatchFailure)
+        clientLock.unlock()
+        return (value.0, value.1, session.readerFailure)
     }
 
     public func clientStats() -> RuntimeClientStats {
         clientLock.lock()
+        defer { clientLock.unlock() }
+        return RuntimeClientStats(deliveredRequests: deliveredRequests, matchedResponses: matchedResponses, matchedDeadletters: matchedDeadletters)
+    }
+
+    public func runtimeInfo() throws -> RuntimeInfoSnapshot {
+        try session.withOpen { _ in
+            var value = coakka_swift_runtime_info_t()
+            try throwIfNativeError(coakka_swift_runtime_get_info(session.handle, &value), operation: "read runtime info")
+            return RuntimeInfoSnapshot(abiVersion: value.abi_version, featureFlags: value.feature_flags,
+                runtimeVersion: nativeString(value.runtime_version), gitCommit: nativeString(value.git_commit), backend: nativeString(value.backend))
+        }
+    }
+
+    public func runtimeConfig() throws -> RuntimeConfigSnapshot {
+        try session.withOpen { runtime in
+            var value = coakka_swift_runtime_config_view_t()
+            try throwIfNativeError(coakka_swift_runtime_get_config(session.handle, runtime, &value), operation: "read runtime config")
+            return RuntimeConfigSnapshot(systemName: nativeString(value.system_name), nodeID: nativeString(value.node_id),
+                strictNoDrop: value.strict_no_drop != 0, queueCapacity: value.queue_capacity,
+                runtimeState: toRuntimeState(value.runtime_state), snapshotPresent: value.snapshot_present != 0,
+                appliedGeneration: value.applied_generation, routeCount: value.route_count)
+        }
+    }
+
+    public func health() throws -> RuntimeHealthSnapshot {
+        try session.withOpen { runtime in
+            var value = coakka_swift_runtime_health_t()
+            try throwIfNativeError(coakka_swift_runtime_get_health(session.handle, runtime, &value), operation: "read runtime health")
+            return RuntimeHealthSnapshot(runtimeState: toRuntimeState(value.runtime_state.rawValue), flags: value.flags, appliedGeneration: value.applied_generation)
+        }
+    }
+
+    public func stats() throws -> RuntimeStatsSnapshot {
+        try session.withOpen { runtime in
+            var value = coakka_swift_runtime_stats_t()
+            try throwIfNativeError(coakka_swift_runtime_get_stats(session.handle, runtime, &value), operation: "read runtime stats")
+            return RuntimeStatsSnapshot(appliedGeneration: value.applied_generation, routeCount: value.route_count,
+                runtimeState: toRuntimeState(value.runtime_state.rawValue), ingressQueueCapacity: value.ingress_queue_capacity,
+                ingressQueueDepth: value.ingress_queue_depth, ingressQueueHighWatermark: value.ingress_queue_high_watermark,
+                queueRejectedCount: value.queue_rejected_count, routeMissCount: value.route_miss_count,
+                deadletterCount: value.deadletter_count, deliveryFailedCount: value.delivery_failed_count)
+        }
+    }
+
+    private func dispatchRequest(_ frame: UnsafePointer<UInt8>, size: Int) {
+        var targetBytes: UnsafeMutablePointer<UInt8>?, payloadBytes: UnsafeMutablePointer<UInt8>?
+        var targetSize = 0, payloadSize = 0
+        var oneWay: UInt32 = 0
         defer {
-            clientLock.unlock()
+            coakka_swift_client_bytes_release(session.handle, targetBytes)
+            coakka_swift_client_bytes_release(session.handle, payloadBytes)
         }
-        return RuntimeClientStats(
-            deliveredRequests: deliveredRequests,
-            matchedResponses: matchedResponses,
-            matchedDeadletters: matchedDeadletters
-        )
-    }
-
-    public func close() {
-        transportLock.lock()
-        defer { transportLock.unlock() }
-
-        clientLock.lock()
-        if closed {
-            clientLock.unlock()
-            return
-        }
-        closed = true
-        clientLock.unlock()
-
-        requestReader?.stop()
-        requestReader = nil
-
-        if let handle = library.handle {
-            if let askClient {
-                coakka_swift_ask_client_destroy(handle, askClient)
-                self.askClient = nil
-            }
-            if let runtime {
-                _ = coakka_swift_runtime_stop(handle, runtime)
-                if var handles = hostHandles {
-                    coakka_swift_host_handles_close(&handles)
-                    hostHandles = nil
-                }
-                coakka_swift_runtime_destroy(handle, runtime)
-                self.runtime = nil
-            }
-        }
-        library.close()
-
-        RuntimeHost.activeLock.lock()
-        RuntimeHost.active = false
-        RuntimeHost.activeLock.unlock()
-    }
-
-    private func startReaders(handles: coakka_swift_host_handles_t) throws {
-        let fd = handles.delivered_request_read_fd >= 0 ? handles.delivered_request_read_fd : handles.response_read_fd
-        requestReader = try RuntimeFrameReader(
-            library: library,
-            fd: fd,
-            name: "request",
-            onFrame: { [weak self] frame in
-                self?.dispatchRequest(frame)
-            },
-            onError: { _ in }
-        )
-    }
-
-    private func dispatchRequest(_ frame: Data) {
         do {
-            let envelope = try RuntimeEnvelopeCodec.decodeEnvelope(frame)
-            let request = RuntimeRequest(
-                messageID: envelope.messageID,
-                source: envelope.source,
-                target: envelope.target,
-                payload: envelope.payload,
-                oneWay: envelope.oneWay
-            )
-            let handler: (@Sendable (RuntimeRequest) throws -> Data)?
+            try throwIfNativeError(coakka_swift_copy_request_dispatch(session.handle, frame, size,
+                &targetBytes, &targetSize, &payloadBytes, &payloadSize, &oneWay), operation: "copy request dispatch")
+            let (target, handler) = try projectDispatchTarget(targetBytes, size: targetSize)
+            let payload = try copyNativeBytes(payloadBytes, count: payloadSize)
             clientLock.lock()
-            deliveredRequests += 1
-            handler = handlers[request.target]
+            deliveredRequests &+= 1
             clientLock.unlock()
-            guard let handler else {
-                return
+            guard let handler else { return }
+            let response: Data
+            switch handler {
+            case .payload(let callback): response = try callback(payload)
+            case .rich(let callback):
+                let envelope = try RuntimeEnvelopeCodec.decodeEnvelope(Data(bytes: frame, count: size))
+                response = try callback(RuntimeRequest(messageID: envelope.messageID, source: envelope.source,
+                    target: target, payload: payload, oneWay: oneWay != 0))
             }
-            let replyPayload = try handler(request)
-            guard !request.oneWay else {
-                return
+            guard oneWay == 0 else { return }
+            try session.withOpen { runtime in
+                try target.withCString { source in
+                    try response.withUnsafeBytes { bytes in
+                        var reply = coakka_swift_raw_reply_spec_t(struct_size: MemoryLayout<coakka_swift_raw_reply_spec_t>.size,
+                            request_buf: frame, request_len: size, source: source,
+                            payload: bytes.bindMemory(to: UInt8.self).baseAddress, payload_len: response.count)
+                        var wire: UnsafeMutablePointer<UInt8>?
+                        var length = 0
+                        defer { coakka_swift_client_bytes_release(session.handle, wire) }
+                        try throwIfNativeError(coakka_swift_build_raw_reply(session.handle, &reply, &wire, &length), operation: "build reply")
+                        try throwIfNativeError(coakka_swift_runtime_submit_envelope(session.handle, runtime, wire, length), operation: "submit reply")
+                    }
+                }
             }
-            let reply = try buildRawReply(requestFrame: frame, source: request.target, payload: replyPayload)
-            try submitRawEnvelope(reply)
         } catch {
+            clientLock.lock()
+            dispatchFailures &+= 1
+            lastDispatchFailure = String(String(describing: error).prefix(1024))
+            clientLock.unlock()
         }
     }
 
-    private func buildRawRequest(
-        messageID: String,
-        source: String,
-        target: String,
-        replyTo: String,
-        payload: Data,
-        timeoutMs: UInt32,
-        deliveryHint: DeliveryHint
-    ) throws -> Data {
-        let handle = try library.requireHandle()
-        return try messageID.withCString { cMessageID in
-            try source.withCString { cSource in
-                try target.withCString { cTarget in
-                    try replyTo.withCString { cReplyTo in
-                        try payload.withUnsafeBytes { rawPayload in
-                            var spec = coakka_swift_raw_request_spec_t()
-                            spec.struct_size = MemoryLayout<coakka_swift_raw_request_spec_t>.size
-                            spec.message_id = cMessageID
-                            spec.source = cSource
-                            spec.target = cTarget
-                            spec.reply_to = cReplyTo
-                            spec.payload = rawPayload.bindMemory(to: UInt8.self).baseAddress
-                            spec.payload_len = payload.count
-                            spec.timeout_ms = timeoutMs
-                            spec.delivery_hint = deliveryHint.rawValue
-                            spec.one_way = 0
-                            var outBuffer: UnsafeMutablePointer<UInt8>?
-                            var outLength = 0
-                            try throwIfNativeError(
-                                coakka_swift_build_raw_request(handle, &spec, &outBuffer, &outLength),
-                                operation: "build request"
-                            )
-                            guard let outBuffer else {
-                                throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "build request")
-                            }
-                            let data = Data(bytes: outBuffer, count: outLength)
-                            coakka_swift_client_bytes_release(handle, outBuffer)
-                            return data
-                        }
-                    }
-                }
-            }
+    private func projectDispatchTarget(_ pointer: UnsafePointer<UInt8>?, size: Int) throws -> (String, Handler?) {
+        guard size > 0, let pointer else { throw RuntimeError.contractViolation("invalid Core dispatch target span") }
+        let bytes = UnsafeBufferPointer(start: pointer, count: size)
+        if let cached = dispatchProjection, cached.bytes.count == size,
+           cached.bytes.withUnsafeBytes({ $0.elementsEqual(UnsafeRawBufferPointer(bytes)) }) {
+            return (cached.target, cached.handler)
         }
-    }
-
-    private func buildRawReply(requestFrame: Data, source: String, payload: Data) throws -> Data {
-        let handle = try library.requireHandle()
-        return try source.withCString { cSource in
-            try requestFrame.withUnsafeBytes { requestBytes in
-                try payload.withUnsafeBytes { payloadBytes in
-                    var spec = coakka_swift_raw_reply_spec_t()
-                    spec.struct_size = MemoryLayout<coakka_swift_raw_reply_spec_t>.size
-                    spec.request_buf = requestBytes.bindMemory(to: UInt8.self).baseAddress
-                    spec.request_len = requestFrame.count
-                    spec.source = cSource
-                    spec.payload = payloadBytes.bindMemory(to: UInt8.self).baseAddress
-                    spec.payload_len = payload.count
-                    var outBuffer: UnsafeMutablePointer<UInt8>?
-                    var outLength = 0
-                    try throwIfNativeError(
-                        coakka_swift_build_raw_reply(handle, &spec, &outBuffer, &outLength),
-                        operation: "build reply"
-                    )
-                    guard let outBuffer else {
-                        throw RuntimeError.nativeStatus(Int32(COAKKA_SWIFT_STATUS_BAD_STATE), "build reply")
-                    }
-                    let data = Data(bytes: outBuffer, count: outLength)
-                    coakka_swift_client_bytes_release(handle, outBuffer)
-                    return data
-                }
-            }
+        // Remove the avoidable transient Data-to-String copy. Core's returned
+        // target and payload ownership copies remain unchanged.
+        guard let target = String(bytes: bytes, encoding: .utf8) else {
+            throw RuntimeError.contractViolation("Core dispatch target is not UTF-8")
         }
-    }
-
-    private func submitRawEnvelope(_ data: Data) throws {
-        let handle = try library.requireHandle()
-        guard let runtime else {
-            throw RuntimeError.closed
-        }
-        try data.withUnsafeBytes { bytes in
-            try throwIfNativeError(
-                coakka_swift_runtime_submit_envelope(handle, runtime, bytes.bindMemory(to: UInt8.self).baseAddress, data.count),
-                operation: "submit reply"
-            )
-        }
-    }
-
-    private func nextMessageID(source: String) -> String {
         clientLock.lock()
-        nextID += 1
-        let value = nextID
+        let handler = handlers[target]
         clientLock.unlock()
-        return "\(source)-swift-\(value)"
-    }
-
-    private func incrementMatchedResponses() {
-        clientLock.lock()
-        matchedResponses += 1
-        clientLock.unlock()
-    }
-
-    private func incrementMatchedDeadletters() {
-        clientLock.lock()
-        matchedDeadletters += 1
-        clientLock.unlock()
-    }
-
-    func throwIfClosed() throws {
-        clientLock.lock()
-        let isClosed = closed
-        clientLock.unlock()
-        if isClosed {
-            throw RuntimeError.closed
+        if size <= 256, let handler {
+            dispatchProjection = DispatchProjection(bytes: Data(bytes), target: target, handler: handler)
         }
+        return (target, handler)
     }
 }
 
-private func applyNetwork(
-    library: NativeRuntimeLibrary,
-    runtime: OpaquePointer,
-    network: RuntimeNetworkConfig
-) throws {
-    let handle = try library.requireHandle()
-    let bindHost = network.bindHost.map(duplicateCString)
-    let advertiseHost = network.advertiseHost.map(duplicateCString)
-    defer {
-        bindHost?.deallocate()
-        advertiseHost?.deallocate()
-    }
-    try throwIfNativeError(
-        coakka_swift_runtime_apply_network(
-            handle,
-            runtime,
-            network.mode.rawValue,
-            bindHost.map { UnsafePointer($0) },
-            network.bindPort,
-            advertiseHost.map { UnsafePointer($0) },
-            network.advertisePort
-        ),
-        operation: "apply runtime network policy"
-    )
-}
-
-private func applyRoutes(
-    library: NativeRuntimeLibrary,
-    runtime: OpaquePointer,
-    generation: UInt64,
-    routes: [RuntimeRouteSpec]
-) throws {
-    let handle = try library.requireHandle()
-    var endpointStorage: [UnsafeMutablePointer<coakka_swift_endpoint_spec_t>] = []
-    var allocatedStrings: [UnsafeMutablePointer<CChar>] = []
-    var cRoutes: [coakka_swift_route_spec_t] = []
-
-    defer {
-        for endpoint in endpointStorage {
-            endpoint.deallocate()
-        }
-        for string in allocatedStrings {
-            string.deallocate()
-        }
-    }
-
-    for route in routes {
-        let target = duplicateCString(route.target)
-        let host = duplicateCString(route.host)
-        let hint = duplicateCString("")
-        allocatedStrings.append(target)
-        allocatedStrings.append(host)
-        allocatedStrings.append(hint)
-
-        let endpoint = UnsafeMutablePointer<coakka_swift_endpoint_spec_t>.allocate(capacity: 1)
-        endpoint.initialize(to: coakka_swift_endpoint_spec_t(
-            host: UnsafePointer(host),
-            port: route.port,
-            weight: 1,
-            flags: UInt32(COAKKA_SWIFT_ENDPOINT_LOCAL)
-        ))
-        endpointStorage.append(endpoint)
-        cRoutes.append(coakka_swift_route_spec_t(
-            target: UnsafePointer(target),
-            strategy: UInt32(COAKKA_SWIFT_ROUTE_SINGLE_OWNER),
-            route_key_hint: UnsafePointer(hint),
-            flags: 0,
-            endpoints: UnsafePointer(endpoint),
-            endpoint_count: 1
-        ))
-    }
-
-    try cRoutes.withUnsafeBufferPointer { routeBuffer in
-        try throwIfNativeError(
-            coakka_swift_runtime_apply_snapshot(handle, runtime, generation, routeBuffer.baseAddress, routes.count),
-            operation: "apply route snapshot"
-        )
-    }
-}
-
-private func duplicateCString(_ value: String) -> UnsafeMutablePointer<CChar> {
-    let bytes = value.utf8CString
-    let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count)
-    bytes.withUnsafeBufferPointer { buffer in
-        pointer.initialize(from: buffer.baseAddress!, count: buffer.count)
-    }
-    return pointer
-}
-
-private func emptyHostHandles() -> coakka_swift_host_handles_t {
-    var handles = coakka_swift_host_handles_t()
-    handles.struct_size = MemoryLayout<coakka_swift_host_handles_t>.size
-    handles.request_write_fd = -1
-    handles.response_read_fd = -1
-    handles.deadletter_read_fd = -1
-    handles.control_write_fd = -1
-    handles.monitor_read_fd = -1
-    handles.delivered_request_read_fd = -1
-    return handles
+func copyNativeBytes(_ pointer: UnsafePointer<UInt8>?, count: Int) throws -> Data {
+    guard count >= 0, count == 0 || pointer != nil else { throw RuntimeError.contractViolation("invalid native byte span") }
+    return count == 0 ? Data() : Data(bytes: pointer!, count: count)
 }

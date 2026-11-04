@@ -22,7 +22,7 @@ Apple Swift6.2 on macOS, Swift6.0.3 on Linux/Windows x64, and Swift6.4.1 with
 SwiftPM's native build system on Windows ARM64. These are distinct compiler/SDK profiles; one platform's
 toolchain execution does not prove another. Native targets are macOS13 ARM64,
 Linux ARM64 glibc2.35, Linux x64 glibc2.36, Windows10 x64 and Windows11 ARM64.
-The candidate's actual matching-host/minimum-OS record governs support.
+Consult the package qualification record for matching-host and minimum-OS results.
 
 Windows ARM64 is a preview target for this 3.2.1 wave and has no official
 support claim. Its native payload remains included for evaluation. Use the

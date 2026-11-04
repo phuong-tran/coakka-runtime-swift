@@ -6,10 +6,9 @@ it does not infer features from the package or silently substitute a mode.
 
 ## Startup And Defaults
 
-This private native-client candidate is not the historical Core26 package.
-This candidate uses Core `f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`, ABI1 and its
-byte-exact public SDK. All three qualified images report owned request/response
-delivery; this is an inspected artifact fact, not an OS or connector default.
+Swift 3.2.1 includes Core 3.2 (build
+`f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`, ABI 1). Inspect
+`deliveryConfig()` to read the delivery mode accepted by the running Core.
 Optional CPU/connection/I/O/monitor groups are passed to Core construction.
 Omission selects Core AUTO/MULTIPLEXING/OFF/OFF; it is not a Swift default table.
 Security remains an actual pre-start atomic apply. Core validates all policy.
@@ -114,7 +113,7 @@ Pi, BeagleBone, bare metal, industrial Android, and rotation guidance.
 
 ## Platforms And Signing
 
-The package includes five admitted Core 3.2/f9e5a632d/ABI1 native images:
+The package includes five native images for Core 3.2 (build `f9e5a632d`, ABI 1):
 macOS ARM64, Linux ARM64/x64, Windows x64 and Windows ARM64. Windows ARM64
 is an evaluation preview without official support or a final 3.2.1 matching-host
 execution claim. Publisher signing is currently absent and documented

@@ -1,38 +1,42 @@
 # CoAkka Runtime Swift 3.2.1
 
-The Swift connector embeds the same CoAkka native runtime used by the other
-language connectors. The package uses SwiftPM version 3.2.1 over native
-Core 3.2/f9e5a632d/ABI1. It retains the public 3.0.0 API.
+![CoAkka](https://raw.githubusercontent.com/phuong-tran/coakka-samples/main/docs/common/assets/brand/coakka-logo.png)
 
-## Package and build requirements
+CoAkka Runtime for Swift uses the same Core as the other connectors.
+In 3.2.1, the first two numbers identify the bundled Core generation (3.2)
+and the last identifies the Swift connector revision (1). The package includes
+Core build `f9e5a632d` (ABI 1) and retains the public 3.0.0 Swift API.
 
-The product is the dynamic SwiftPM library CoAkkaRuntime, backed by a small
-C11 representation bridge and exact packaged native images. No application
-installs a separate Core/provider library or message-codec dependency.
+## Install with Swift Package Manager
 
-Use the admitted local package through a SwiftPM path dependency during
-preflight. Use the exact version when installing from GitHub.
+Add the exact dependency to your application's `Package.swift`:
 
 ```swift
 .package(url: "https://github.com/phuong-tran/coakka-runtime-swift.git", exact: "3.2.1")
 ```
 
-The manifest/language floor is Swift6.0. Coherent qualification profiles are
-Apple Swift6.2 on macOS, Swift6.0.3 on Linux/Windows x64, and Swift6.4.1 with
-SwiftPM's native build system on Windows ARM64. These are distinct compiler/SDK profiles; one platform's
-toolchain execution does not prove another. Native targets are macOS13 ARM64,
-Linux ARM64 glibc2.35, Linux x64 glibc2.36, Windows10 x64 and Windows11 ARM64.
-Consult the package qualification record for matching-host and minimum-OS results.
+In the application target's dependencies, add:
 
-Windows ARM64 is a preview target for this 3.2.1 wave and has no official
-support claim. Its native payload remains included for evaluation. Use the
-qualified macOS, Linux or Windows x64 profiles for the supported release scope.
+```swift
+.product(name: "CoAkkaRuntime", package: "coakka-runtime-swift")
+```
+
+Then `import CoAkkaRuntime` in your Swift source. SwiftPM builds the dynamic
+library and copies the bundled Core resources. No separate Core install is
+required.
+
+The package requires Swift 6.0 or later. Tested profiles use Apple Swift 6.2
+on macOS ARM64 and Swift 6.0.3 on Linux and Windows x64. Native targets are
+macOS 13 ARM64, Linux ARM64 (glibc 2.35), Linux x64 (glibc 2.36) and Windows x64.
+The included Windows ARM64 image is an evaluation preview; use a supported
+target for production. See the
+[platform evidence](https://github.com/phuong-tran/coakka-samples/blob/main/docs/coakka-runtime/reference/runtime-package-platform-evidence.md).
 
 ## Application ownership
 
 Import CoAkkaRuntime, start a host with application identity/routes, register a
 bounded handler and make typed requests. Follow the complete
-[Swift sample](https://github.com/phuong-tran/coakka-samples/tree/main/coakka-runtime/swift)
+[Swift sample](https://github.com/phuong-tran/coakka-samples/tree/main/coakka-runtime/swift/registry-basic)
 for ordinary SwiftPM integration and throwing scoped cleanup.
 
 Core owns configuration defaults, effective settings, capability probes,
@@ -59,12 +63,7 @@ loader selects an owned OS/CPU image and uses application-relative bundle roots;
 it does not rely on an absolute SwiftPM build-tree path. Native-path overrides
 are development fixtures and are absent from installed-consumer qualification.
 
-The qualification uses whole-module size optimization, disabled private
-reflection metadata and linker dead stripping. Required public Swift/C lookup
-names remain available. Private debug/symbol companions stay outside consumer
-packages. Optimized installed apps must execute after moving away from sources.
-
-## Migration from2.x
+## Migration from 2.x
 
 Recompile against 3.2.1. Host close is throwing; replace nonthrowing defer
 cleanup with a scope that records both causal failures. Runtime values and
@@ -72,11 +71,11 @@ metadata now project the current typed Core contracts. Update names from the
 current API/sample rather than copying another language's identifiers.
 
 See [transport configuration](TRANSPORT_CONFIGURATION.md),
-[release controls](RELEASE.md), [release notes](RELEASE_NOTES.md) and the
+[release verification](RELEASE.md), [release notes](RELEASE_NOTES.md) and the
 [shared documentation](https://github.com/phuong-tran/coakka-samples/blob/main/docs/README.md).
 
 ## License
 
-Connector source uses Apache2.0; bundled native images use the file-scoped
-CoAkka Native Artifact License1.2. Preserve LICENSE, NOTICE, NATIVE-LICENSE.md
-and PACKAGE-LICENSE.md. Publisher signing is absent.
+Connector source uses [Apache License 2.0](LICENSE). The bundled Core uses
+the [CoAkka Native Artifact License 1.2](NATIVE-LICENSE.md). See the
+[package license map](PACKAGE-LICENSE.md) and [NOTICE](NOTICE).

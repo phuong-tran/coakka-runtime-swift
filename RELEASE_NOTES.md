@@ -1,8 +1,8 @@
 # Swift Release Notes
 
-## 3.2.1 candidate
+## 3.2.1
 
-This candidate uses Runtime Core 3.2, commit `f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`,
+This version uses Runtime Core 3.2, commit `f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`,
 and ABI 1. The existing connector API and package coordinate carry
 forward from 3.0.0. Core 3.2 retains native address validation and interruptible Windows
 shutdown under host-pipe pressure. The release also removes a private

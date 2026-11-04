@@ -1,9 +1,8 @@
 # CoAkka Runtime Swift 3.2.1
 
 The Swift connector embeds the same CoAkka native runtime used by the other
-language connectors. This branch prepares SwiftPM version 3.2.1 over native
+language connectors. The package uses SwiftPM version 3.2.1 over native
 Core 3.2/f9e5a632d/ABI1. It retains the public 3.0.0 API.
-Publication requires a separate release command.
 
 ## Package and build requirements
 
@@ -12,7 +11,7 @@ C11 representation bridge and exact packaged native images. No application
 installs a separate Core/provider library or message-codec dependency.
 
 Use the admitted local package through a SwiftPM path dependency during
-preflight. After publication, select the exact version.
+preflight. Use the exact version when installing from GitHub.
 
 ```swift
 .package(url: "https://github.com/phuong-tran/coakka-runtime-swift.git", exact: "3.2.1")

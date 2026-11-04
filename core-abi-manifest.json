@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "core_source": "1522b4a9f30da1039ef8c7d198bbecfc749a2456",
+  "core_source": "f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45",
   "abi_version": 1,
   "authority": "Core public headers; generated copy, do not edit",
   "headers": {
     "coakka/v2/client.h": "7526eb80126d5adda17a568b8b9bc62cc2dff0eba1c04f91d3d76abf53cb79ff",
-    "coakka/v2/control.h": "a099c8235c98c2a7d531d4a1fd6b47a983c2d5c01317d06762843701eeafd3e7",
+    "coakka/v2/control.h": "633a41495ce1373c1511e50cea4e285983093e88936f660434568b755d220add",
     "coakka/v2/dubbing.h": "9f87d35ac71efbd170b007e5a75e4d63b957809025ba8aebef74a3e2d7c9df5b",
     "coakka/v2/event_service.h": "4d5cb16ac075188519640f2c7d5075515de6f208538f41949c62180b27eebf84",
     "coakka/v2/event_service_admin_api.h": "106e3eb1f4921b19975630f8a057c89ed397cd95ccd2cb8ef717452f794eb8f2",
@@ -25,7 +25,7 @@
     "coakka/v2/runtime_monitor.h": "fab390fd67af801011d1b3cc6bde1664d28855351697fe2aaf8759c13d5fbe96",
     "coakka/v2/runtime_startup.h": "876e839e5f4c53af624f63c99847091df60fb07ecde9c4c588739615e15b8dc5",
     "coakka/v2/runtime_topology.h": "922820f7cd8baf80317505ca631846e5d7f4133c3dab7fe5675443eefaddec29",
-    "coakka/v2/runtime_transport_config.h": "8285994dfa6bfc29bb9e72213eef70e2990f0679728e67a55dbc6582cd6d4976",
+    "coakka/v2/runtime_transport_config.h": "394101f9f4fd394a093a5bf839cc711ef9010f79d0e3221cc6416b4d41184d29",
     "coakka/v2/stream_lane.h": "7c2c1914dbb4c534c4b1519cf6908df201b9ccaf6eb687c3b7b2d13963c1ce31",
     "coakka/v2/transport.h": "a00fb8dccd9ea942d68b31e7eb86b35ccc5c010cd176c331135c3c9c0e76905a",
     "coakka/v2/utils.h": "0fa807afcf4731de3ec8678657e07b1daa0e24998b4ddc88ab3b67b3e121ea50"

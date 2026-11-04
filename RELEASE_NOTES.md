@@ -1,4 +1,14 @@
-# Swift 3.0.0 Release Notes
+# Swift Release Notes
+
+## 3.2.1 candidate
+
+This candidate uses Runtime Core 3.2, commit `f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`,
+and ABI 1. The existing connector API and package coordinate carry
+forward from 3.0.0. Core 3.2 retains native address validation and interruptible Windows
+shutdown under host-pipe pressure. The release also removes a private
+diagnostic from the packaged native libraries.
+
+## 3.0.0 — 2026-10-30
 
 Released 2026-10-30 through GitHub and SwiftPM as version 3.0.0. Use product
 CoAkkaRuntime and rebuild older applications against the current APIs.

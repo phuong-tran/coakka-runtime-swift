@@ -49,9 +49,10 @@ enum {
  * EMBEDDED rejects remote endpoints and does not create a listener.
  * OUTBOUND_ONLY permits remote endpoints but does not create a listener.
  * NETWORK_NODE requires explicit bind and advertised endpoints. bind_host is
- * the local IPv4 address passed to bind(2); advertise_host is connector-owned
- * identity and must not be a wildcard address. Strings are borrowed only for
- * the synchronous apply call and are copied by the runtime.
+ * a dotted-decimal IPv4 literal and may be 0.0.0.0. advertise_host is a
+ * concrete IP literal or ASCII hostname with no URI brackets or port.
+ * A scope suffix on an IPv6 literal is preserved. The runtime copies the strings
+ * during the synchronous apply.
  */
 typedef struct coakka_v2_network_options_t {
   size_t struct_size;

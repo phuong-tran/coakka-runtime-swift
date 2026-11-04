@@ -7,7 +7,7 @@ it does not infer features from the package or silently substitute a mode.
 ## Startup And Defaults
 
 This private native-client candidate is not the historical Core26 package.
-P399 uses Core `1522b4a9f30da1039ef8c7d198bbecfc749a2456`, ABI1 and its
+This candidate uses Core `f9e5a632d2d046a5b4e89d5ce0c9042aee5c7b45`, ABI1 and its
 byte-exact public SDK. All three qualified images report owned request/response
 delivery; this is an inspected artifact fact, not an OS or connector default.
 Optional CPU/connection/I/O/monitor groups are passed to Core construction.
@@ -114,9 +114,9 @@ Pi, BeagleBone, bare metal, industrial Android, and rotation guidance.
 
 ## Platforms And Signing
 
-The package includes five admitted Core 3.0.0/1522b4a9/ABI1 native images:
+The package includes five admitted Core 3.2/f9e5a632d/ABI1 native images:
 macOS ARM64, Linux ARM64/x64, Windows x64 and Windows ARM64. Windows ARM64
-is an evaluation preview without official support or a final3.0.0 matching-host
+is an evaluation preview without official support or a final 3.2.1 matching-host
 execution claim. Publisher signing is currently absent and documented
 separately from package digests. Package presence does not replace native
 execution evidence. Use [common troubleshooting](https://github.com/phuong-tran/coakka-samples/blob/main/docs/coakka-runtime/operations/troubleshooting.md)

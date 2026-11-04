@@ -1,10 +1,9 @@
-# CoAkka Runtime Swift 3
+# CoAkka Runtime Swift 3.2.1
 
-CoAkka Runtime is a polyglot, cross-platform distributed runtime for
-application-owned work, backed by a shared native core. Its Swift connector
-keeps application handlers and business behavior in Swift. This package targets SwiftPM version 3.0.0 over native
-Core 3.0.0/1522b4a9/ABI1. It is a new API baseline after public 2.5.3.
-Use the [current package ledger](https://github.com/phuong-tran/coakka-samples/blob/main/docs/common/current-packages.md) for published availability.
+The Swift connector embeds the same CoAkka native runtime used by the other
+language connectors. This branch prepares SwiftPM version 3.2.1 over native
+Core 3.2/f9e5a632d/ABI1. It retains the public 3.0.0 API.
+Publication requires a separate release command.
 
 ## Package and build requirements
 
@@ -12,23 +11,21 @@ The product is the dynamic SwiftPM library CoAkkaRuntime, backed by a small
 C11 representation bridge and exact packaged native images. No application
 installs a separate Core/provider library or message-codec dependency.
 
-Select this exact SwiftPM version:
+Use the admitted local package through a SwiftPM path dependency during
+preflight. After publication, select the exact version.
 
 ```swift
-.package(url: "https://github.com/phuong-tran/coakka-runtime-swift.git", exact: "3.0.0")
+.package(url: "https://github.com/phuong-tran/coakka-runtime-swift.git", exact: "3.2.1")
 ```
 
-Use product `CoAkkaRuntime` in your application target. Controlled local
-qualification uses an admitted path dependency, separate from normal installs.
-
-The manifest/language floor is Swift 6.0. Coherent qualification profiles are
-Apple Swift 6.2 on macOS, Swift 6.0.3 on Linux/Windows x64, and Swift 6.4.1 with
+The manifest/language floor is Swift6.0. Coherent qualification profiles are
+Apple Swift6.2 on macOS, Swift6.0.3 on Linux/Windows x64, and Swift6.4.1 with
 SwiftPM's native build system on Windows ARM64. These are distinct compiler/SDK profiles; one platform's
-toolchain execution does not prove another. Native targets are macOS 13 ARM64,
-Linux ARM64 glibc 2.35, Linux x64 glibc 2.36, Windows 10 x64 and Windows 11 ARM64.
+toolchain execution does not prove another. Native targets are macOS13 ARM64,
+Linux ARM64 glibc2.35, Linux x64 glibc2.36, Windows10 x64 and Windows11 ARM64.
 The candidate's actual matching-host/minimum-OS record governs support.
 
-Windows ARM64 is a preview target for this 3.0.0 wave and has no official
+Windows ARM64 is a preview target for this 3.2.1 wave and has no official
 support claim. Its native payload remains included for evaluation. Use the
 qualified macOS, Linux or Windows x64 profiles for the supported release scope.
 
@@ -51,7 +48,8 @@ Callbacks retain their required owners until retirement. A failed throwing
 close preserves owners for explicit retry; application cleanup must preserve
 both the operation failure and a close failure.
 
-Core manages request delivery and completion notifications. File and Stream share
+The engine uses Core-owned delivery and doorbell wakeup intent. Legacy output
+FD/pipe payload parsing is not the normal reader path. File and Stream share
 the same typed status/ownership law; unknown numeric Core values remain unknown.
 
 ## Deployment
@@ -69,7 +67,7 @@ packages. Optimized installed apps must execute after moving away from sources.
 
 ## Migration from2.x
 
-Recompile against3.0.0. Host close is throwing; replace nonthrowing defer
+Recompile against 3.2.1. Host close is throwing; replace nonthrowing defer
 cleanup with a scope that records both causal failures. Runtime values and
 metadata now project the current typed Core contracts. Update names from the
 current API/sample rather than copying another language's identifiers.

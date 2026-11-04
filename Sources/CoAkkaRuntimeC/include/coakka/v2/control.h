@@ -19,7 +19,9 @@ extern "C" {
  * delivery. Explicit-network hosts may set port to zero. Legacy hosts may
  * retain a non-zero port while migrating away from route-derived listeners.
  *
- * Remote endpoint host must be concrete and its port must be non-zero.
+ * A remote endpoint requires a concrete IP literal or ASCII hostname and a
+ * non-zero port. Pass the host without URI brackets or a port. A scope
+ * suffix on an IPv6 literal reaches the operating system unchanged.
  */
 typedef struct coakka_v2_endpoint_t {
     const char *host;
